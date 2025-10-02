@@ -18,6 +18,20 @@ function App() {
   const [operaciones, setOperaciones] = useState([]);
   const [asignaciones, setAsignaciones] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [filtroTaller, setFiltroTaller] = useState('hoy');
+
+  // Estado adicional para Pantalla Taller (no altera flujo existente)
+  const [pantallaTaller, setPantallaTaller] = useState(false);
+
+  useEffect(() => {
+    let interval;
+    if (activeView === 'taller') {
+      interval = setInterval(() => {
+        cargarDatos();
+      }, 30000); // Actualiza cada 30 segundos
+    }
+    return () => clearInterval(interval);
+  }, [activeView]);
 
   const [formAsig, setFormAsig] = useState({ 
     empleado_id: '', 
@@ -181,7 +195,6 @@ function App() {
     setEditingPrenda(null);
     setFormPrenda({ referencia: '', descripcion: '' });
   };
-
   // CRUD OPERACIONES
   const agregarOperacion = async () => {
     if (!formOp.nombre || !formOp.costo || !formOp.prenda_id) {
@@ -391,7 +404,6 @@ function App() {
   };
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
   // PANTALLA DE LOGIN
   if (activeView === 'login') {
     return (
@@ -511,10 +523,11 @@ function App() {
                     <th className="px-3 py-2 text-left">Talla</th>
                     <th className="px-3 py-2 text-left">Monto</th>
                     <th className="px-3 py-2 text-left">Estado</th>
+                    <th className="px-3 py-2 text-left">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {asignaciones.slice(0, 20).map(a => {
+                  {asignaciones.slice(0, 50).map(a => {
                     const emp = empleados.find(e => e.id === a.empleado_id);
                     const op = operaciones.find(o => o.id === a.operacion_id);
                     return (
@@ -529,6 +542,19 @@ function App() {
                           <span className={`px-2 py-1 rounded text-xs ${a.completado ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                             {a.completado ? 'OK' : 'Pend'}
                           </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <button
+                            onClick={() => toggleCompletado(a.id, a.completado)}
+                            disabled={loading}
+                            className={`px-3 py-1 rounded text-xs font-semibold ${
+                              a.completado 
+                                ? 'bg-gray-500 text-white hover:bg-gray-600' 
+                                : 'bg-green-600 text-white hover:bg-green-700'
+                            } disabled:bg-gray-300`}
+                          >
+                            {a.completado ? 'Revertir' : 'Completar'}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -567,6 +593,7 @@ function App() {
               <NavBtn view="prendas" icon={Package} label="Prendas" />
               <NavBtn view="operaciones" icon={Settings} label="Operaciones" />
               <NavBtn view="nomina" icon={DollarSign} label="Nómina" />
+              <NavBtn view="taller" icon={BarChart3} label="Pantalla Taller" />
               <button onClick={handleLogout} className="px-3 py-2 rounded bg-red-600 text-white text-sm">
                 <LogOut className="w-4 h-4 inline mr-1" />Salir
               </button>
@@ -1011,9 +1038,259 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+    </div>
+      
+        {activeView === 'taller' && (() => {
+  const hoy = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const hora = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
 
-      {activeView === 'nomina' && (
+  const filtrarAsignacionesPorPeriodo = () => {
+    const hoyDate = new Date();
+    hoyDate.setHours(0, 0, 0, 0);
+    
+    switch(filtroTaller) {
+      case 'hoy':
+        return asignaciones.filter(a => {
+          const fechaAsig = new Date(a.fecha);
+          fechaAsig.setHours(0, 0, 0, 0);
+          return fechaAsig.getTime() === hoyDate.getTime();
+        });
+      case 'ayer':
+        const ayer = new Date(hoyDate);
+        ayer.setDate(ayer.getDate() - 1);
+        return asignaciones.filter(a => {
+          const fechaAsig = new Date(a.fecha);
+          fechaAsig.setHours(0, 0, 0, 0);
+          return fechaAsig.getTime() === ayer.getTime();
+        });
+      case '5dias':
+        const hace5 = new Date(hoyDate);
+        hace5.setDate(hace5.getDate() - 5);
+        return asignaciones.filter(a => {
+          const fechaAsig = new Date(a.fecha);
+          return fechaAsig >= hace5 && fechaAsig <= hoyDate;
+        });
+      case '10dias':
+        const hace10 = new Date(hoyDate);
+        hace10.setDate(hace10.getDate() - 10);
+        return asignaciones.filter(a => {
+          const fechaAsig = new Date(a.fecha);
+          return fechaAsig >= hace10 && fechaAsig <= hoyDate;
+        });
+      case '15dias':
+        const hace15 = new Date(hoyDate);
+        hace15.setDate(hace15.getDate() - 15);
+        return asignaciones.filter(a => {
+          const fechaAsig = new Date(a.fecha);
+          return fechaAsig >= hace15 && fechaAsig <= hoyDate;
+        });
+      case 'mes':
+        const hace30 = new Date(hoyDate);
+        hace30.setDate(hace30.getDate() - 30);
+        return asignaciones.filter(a => {
+          const fechaAsig = new Date(a.fecha);
+          return fechaAsig >= hace30 && fechaAsig <= hoyDate;
+        });
+      case 'todo':
+      default:
+        return asignaciones;
+    }
+  };
+
+  const asignacionesFiltradas = filtrarAsignacionesPorPeriodo();
+  const pendientesFiltradas = asignacionesFiltradas.filter(a => !a.completado);
+  const completadasFiltradas = asignacionesFiltradas.filter(a => a.completado);
+
+  const obtenerTituloPeriodo = () => {
+    switch(filtroTaller) {
+      case 'hoy': return 'HOY';
+      case 'ayer': return 'AYER';
+      case '5dias': return 'ÚLTIMOS 5 DÍAS';
+      case '10dias': return 'ÚLTIMOS 10 DÍAS';
+      case '15dias': return 'ÚLTIMOS 15 DÍAS';
+      case 'mes': return 'ÚLTIMO MES';
+      case 'todo': return 'HISTÓRICO COMPLETO';
+      default: return 'PERÍODO';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 text-white p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">PANEL DE PRODUCCIÓN</h1>
+            <p className="text-xl opacity-90 capitalize">{hoy}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-5xl font-bold">{hora}</p>
+            <button
+              onClick={() => setActiveView('dashboard')}
+              className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700 text-sm"
+            >
+              Salir Pantalla Completa
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white bg-opacity-10 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <p className="text-lg font-semibold">Período: {obtenerTituloPeriodo()}</p>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setFiltroTaller('hoy')}
+                className={`px-4 py-2 rounded font-semibold transition-all ${
+                  filtroTaller === 'hoy' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                }`}
+              >
+                Hoy
+              </button>
+              <button
+                onClick={() => setFiltroTaller('ayer')}
+                className={`px-4 py-2 rounded font-semibold transition-all ${
+                  filtroTaller === 'ayer' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                }`}
+              >
+                Ayer
+              </button>
+              <button
+                onClick={() => setFiltroTaller('5dias')}
+                className={`px-4 py-2 rounded font-semibold transition-all ${
+                  filtroTaller === '5dias' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                }`}
+              >
+                5 Días
+              </button>
+              <button
+                onClick={() => setFiltroTaller('10dias')}
+                className={`px-4 py-2 rounded font-semibold transition-all ${
+                  filtroTaller === '10dias' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                }`}
+              >
+                10 Días
+              </button>
+              <button
+                onClick={() => setFiltroTaller('15dias')}
+                className={`px-4 py-2 rounded font-semibold transition-all ${
+                  filtroTaller === '15dias' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                }`}
+              >
+                15 Días
+              </button>
+              <button
+                onClick={() => setFiltroTaller('mes')}
+                className={`px-4 py-2 rounded font-semibold transition-all ${
+                  filtroTaller === 'mes' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                }`}
+              >
+                Mes
+              </button>
+              <button
+                onClick={() => setFiltroTaller('todo')}
+                className={`px-4 py-2 rounded font-semibold transition-all ${
+                  filtroTaller === 'todo' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                }`}
+              >
+                Todo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="bg-white bg-opacity-10 rounded-lg p-6">
+            <p className="text-sm opacity-80 mb-2">TOTAL</p>
+            <p className="text-5xl font-bold">{asignacionesFiltradas.length}</p>
+          </div>
+          <div className="bg-yellow-500 bg-opacity-20 rounded-lg p-6">
+            <p className="text-sm opacity-80 mb-2">PENDIENTES</p>
+            <p className="text-5xl font-bold">{pendientesFiltradas.length}</p>
+          </div>
+          <div className="bg-green-500 bg-opacity-20 rounded-lg p-6">
+            <p className="text-sm opacity-80 mb-2">COMPLETADAS</p>
+            <p className="text-5xl font-bold">{completadasFiltradas.length}</p>
+          </div>
+          <div className="bg-purple-500 bg-opacity-20 rounded-lg p-6">
+            <p className="text-sm opacity-80 mb-2">PRODUCTIVIDAD</p>
+            <p className="text-5xl font-bold">
+              {asignacionesFiltradas.length > 0 ? Math.round((completadasFiltradas.length / asignacionesFiltradas.length) * 100) : 0}%
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white bg-opacity-10 rounded-lg p-6 mb-6">
+          <h2 className="text-3xl font-bold mb-4 flex items-center">
+            <Clock className="w-8 h-8 mr-3" /> OPERACIONES PENDIENTES
+          </h2>
+          {pendientesFiltradas.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
+              {pendientesFiltradas.map(a => {
+                const emp = empleados.find(e => e.id === a.empleado_id);
+                const op = operaciones.find(o => o.id === a.operacion_id);
+                return (
+                  <div key={a.id} className="bg-yellow-500 bg-opacity-20 rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <p className="text-2xl font-bold">ID: {emp?.id} - {emp?.nombre}</p>
+                        <p className="text-xl opacity-90 mt-1">{op?.nombre}</p>
+                        <p className="text-sm opacity-70 mt-1">Fecha: {new Date(a.fecha).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold">{a.cantidad} und</p>
+                        <p className="text-lg opacity-90">Talla: {a.talla}</p>
+                      </div>
+                      <div className="ml-6 text-right">
+                        <p className="text-sm opacity-80">Valor</p>
+                        <p className="text-3xl font-bold text-yellow-300">${parseFloat(a.monto).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-center text-2xl opacity-60 py-8">No hay operaciones pendientes en este período</p>
+          )}
+        </div>
+
+        <div className="bg-white bg-opacity-10 rounded-lg p-6">
+          <h2 className="text-3xl font-bold mb-4 flex items-center">
+            <BarChart3 className="w-8 h-8 mr-3" /> ÚLTIMAS COMPLETADAS
+          </h2>
+          {completadasFiltradas.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+              {completadasFiltradas.slice(0, 10).map(a => {
+                const emp = empleados.find(e => e.id === a.empleado_id);
+                const op = operaciones.find(o => o.id === a.operacion_id);
+                return (
+                  <div key={a.id} className="bg-green-500 bg-opacity-20 rounded-lg p-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-lg font-bold">ID: {emp?.id} - {emp?.nombre}</p>
+                        <p className="text-sm opacity-90">{op?.nombre} • {a.cantidad} und • {a.talla}</p>
+                        <p className="text-xs opacity-70 mt-1">{new Date(a.fecha).toLocaleDateString()}</p>
+                      </div>
+                      <p className="text-xl font-bold text-green-300">${parseFloat(a.monto).toLocaleString()}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-center text-2xl opacity-60 py-8">No hay operaciones completadas en este período</p>
+          )}
+        </div>
+
+        <div className="mt-6 text-center opacity-60">
+          <p className="text-sm">Actualización automática cada 30 segundos</p>
+        </div>
+      </div>
+    </div>
+  );
+})()}
+
+
+        {activeView === 'nomina' && (
           <div>
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <h2 className="text-xl font-bold mb-4">Cálculo de Nómina por Período</h2>
