@@ -2,24 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import { User, Package, Settings, BarChart3, DollarSign, Clock, LogOut, Plus, Trash2, Edit } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 function App() {
   const [filtroFechaInicio, setFiltroFechaInicio] = useState('');
   const [filtroFechaFin, setFiltroFechaFin] = useState('');
   const [nominaFiltrada, setNominaFiltrada] = useState(null);
-
   const [currentUser, setCurrentUser] = useState(null);
   const [loginId, setLoginId] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [activeView, setActiveView] = useState('login');
-
   const [empleados, setEmpleados] = useState([]);
   const [prendas, setPrendas] = useState([]);
   const [operaciones, setOperaciones] = useState([]);
   const [asignaciones, setAsignaciones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filtroTaller, setFiltroTaller] = useState('hoy');
-
+  const [cargandoArchivo, setCargandoArchivo] = useState(false);
   // Estado adicional para Pantalla Taller (no altera flujo existente)
   const [pantallaTaller, setPantallaTaller] = useState(false);
 
@@ -249,7 +249,154 @@ function App() {
     if (error) alert('Error: ' + error.message);
     else cargarDatos();
   };
+  // AGREGAR DESPUÉS DE LA LÍNEA 267 (después de eliminarOperacion)
 
+  const descargarPlantillaOperaciones = () => {
+    const plantilla = [
+      {
+        'Referencia Prenda': 'BUSO ALBATROS',
+        'Descripción Prenda': 'Buso deportivo con capota',
+        'Nombre Operación': 'CERRAR HOMBROS',
+        'Costo': 120
+      },
+      {
+        'Referencia Prenda': 'BUSO ALBATROS',
+        'Descripción Prenda': 'Buso deportivo con capota',
+        'Nombre Operación': 'MONTAR MANGAS',
+        'Costo': 200
+      },
+      {
+        'Referencia Prenda': 'CAMISA CASUAL',
+        'Descripción Prenda': 'Camisa manga larga',
+        'Nombre Operación': 'HACER CUELLO',
+        'Costo': 150
+      }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(plantilla);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Operaciones');
+
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, 'Plantilla_Operaciones.xlsx');
+    alert('✓ Plantilla descargada. Incluye columnas para crear prendas automáticamente.');
+  };
+
+  const cargarArchivoOperaciones = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setCargandoArchivo(true);
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      if (jsonData.length === 0) {
+        alert('El archivo está vacío');
+        setCargandoArchivo(false);
+        return;
+      }
+
+      // Validar columnas requeridas
+      const primeraFila = jsonData[0];
+      if (!primeraFila['Referencia Prenda'] || !primeraFila['Nombre Operación'] || !primeraFila.Costo) {
+        alert('El archivo debe tener las columnas:\n- Referencia Prenda\n- Descripción Prenda (opcional)\n- Nombre Operación\n- Costo');
+        setCargandoArchivo(false);
+        return;
+      }
+
+      let prendasCreadas = 0;
+      let operacionesCreadas = 0;
+      const errores = [];
+
+      // Procesar cada fila
+      for (let index = 0; index < jsonData.length; index++) {
+        const row = jsonData[index];
+
+        const refPrenda = row['Referencia Prenda']?.toString().trim();
+        const descPrenda = row['Descripción Prenda']?.toString().trim() || '';
+        const nombreOp = row['Nombre Operación']?.toString().trim();
+        const costo = parseFloat(row.Costo);
+
+        // Validar datos básicos
+        if (!refPrenda || !nombreOp || isNaN(costo)) {
+          errores.push(`Fila ${index + 2}: Datos incompletos o inválidos`);
+          continue;
+        }
+
+        try {
+          // Buscar si la prenda ya existe (case insensitive)
+          let prenda = prendas.find(p =>
+            p.referencia.toUpperCase() === refPrenda.toUpperCase()
+          );
+
+          // Si no existe, crearla
+          if (!prenda) {
+            const { data: nuevaPrenda, error: errorPrenda } = await supabase
+              .from('prendas')
+              .insert([{
+                referencia: refPrenda.toUpperCase(),
+                descripcion: descPrenda
+              }])
+              .select()
+              .single();
+
+            if (errorPrenda) {
+              errores.push(`Fila ${index + 2}: Error al crear prenda "${refPrenda}"`);
+              continue;
+            }
+
+            prenda = nuevaPrenda;
+            prendas.push(nuevaPrenda); // Actualizar array local
+            prendasCreadas++;
+          }
+
+          // Crear la operación
+          const { error: errorOp } = await supabase
+            .from('operaciones')
+            .insert([{
+              nombre: nombreOp,
+              costo: costo,
+              prenda_id: prenda.id
+            }]);
+
+          if (errorOp) {
+            errores.push(`Fila ${index + 2}: Error al crear operación "${nombreOp}"`);
+          } else {
+            operacionesCreadas++;
+          }
+
+        } catch (error) {
+          errores.push(`Fila ${index + 2}: ${error.message}`);
+        }
+      }
+
+      // Recargar datos
+      await cargarDatos();
+
+      // Mostrar resumen
+      let mensaje = `✓ CARGA COMPLETADA\n\n`;
+      mensaje += `📦 Prendas creadas: ${prendasCreadas}\n`;
+      mensaje += `⚙️ Operaciones creadas: ${operacionesCreadas}\n`;
+      if (errores.length > 0) {
+        mensaje += `\n⚠️ Errores (${errores.length}):\n${errores.slice(0, 5).join('\n')}`;
+        if (errores.length > 5) {
+          mensaje += `\n... y ${errores.length - 5} más`;
+        }
+      }
+      alert(mensaje);
+
+    } catch (error) {
+      alert('Error al procesar el archivo: ' + error.message);
+    } finally {
+      setCargandoArchivo(false);
+      event.target.value = '';
+    }
+  };
   // CRUD ASIGNACIONES
   const asignarOperacion = async () => {
     if (!formAsig.empleado_id || !formAsig.prenda_id || !formAsig.operacion_id || !formAsig.cantidad) {
@@ -262,7 +409,7 @@ function App() {
 
     const data = {
       empleado_id: parseInt(formAsig.empleado_id),
-      prenda_id: parseInt(formAsig.prenda_id),  // ← AGREGAR
+      prenda_id: parseInt(formAsig.prenda_id),
       operacion_id: parseInt(formAsig.operacion_id),
       cantidad: parseInt(formAsig.cantidad),
       talla: formAsig.talla,
@@ -1042,9 +1189,39 @@ function App() {
 
         {activeView === 'operaciones' && (
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">
-              {editingOp ? 'Editar Operación' : 'Operaciones'}
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {editingOp ? 'Editar Operación' : 'Operaciones'}
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={descargarPlantillaOperaciones}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm flex items-center gap-2"
+                >
+                  📥 Descargar Plantilla Excel
+                </button>
+                <label className={`px-4 py-2 rounded text-sm cursor-pointer flex items-center gap-2 ${cargandoArchivo
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                  }`}>
+                  {cargandoArchivo ? '⏳ Cargando...' : '📤 Cargar Excel Masivo'}
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={cargarArchivoOperaciones}
+                    disabled={cargandoArchivo}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>💡 Carga Masiva Inteligente:</strong> Si una prenda no existe en el sistema,
+                se creará automáticamente al cargar las operaciones.
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <input
                 value={formOp.nombre}
