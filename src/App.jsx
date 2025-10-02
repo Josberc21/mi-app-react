@@ -4,15 +4,15 @@ import { User, Package, Settings, BarChart3, DollarSign, Clock, LogOut, Plus, Tr
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 function App() {
-   const [filtroFechaInicio, setFiltroFechaInicio] = useState('');
-   const [filtroFechaFin, setFiltroFechaFin] = useState('');
-   const [nominaFiltrada, setNominaFiltrada] = useState(null);
+  const [filtroFechaInicio, setFiltroFechaInicio] = useState('');
+  const [filtroFechaFin, setFiltroFechaFin] = useState('');
+  const [nominaFiltrada, setNominaFiltrada] = useState(null);
 
   const [currentUser, setCurrentUser] = useState(null);
   const [loginId, setLoginId] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [activeView, setActiveView] = useState('login');
-  
+
   const [empleados, setEmpleados] = useState([]);
   const [prendas, setPrendas] = useState([]);
   const [operaciones, setOperaciones] = useState([]);
@@ -33,10 +33,11 @@ function App() {
     return () => clearInterval(interval);
   }, [activeView]);
 
-  const [formAsig, setFormAsig] = useState({ 
-    empleado_id: '', 
-    operacion_id: '', 
-    cantidad: '', 
+  const [formAsig, setFormAsig] = useState({
+    empleado_id: '',
+    prenda_id: '',
+    operacion_id: '',
+    cantidad: '',
     talla: 'S',
     fecha: new Date().toISOString().split('T')[0]
   });
@@ -45,7 +46,7 @@ function App() {
   const [formPrenda, setFormPrenda] = useState({ referencia: '', descripcion: '' });
   const [formOp, setFormOp] = useState({ nombre: '', costo: '', prenda_id: '' });
   const [editingOp, setEditingOp] = useState(null);
-  const [editingEmp, setEditingEmp] = useState(null); 
+  const [editingEmp, setEditingEmp] = useState(null);
   const [editingPrenda, setEditingPrenda] = useState(null);
 
 
@@ -201,7 +202,7 @@ function App() {
       alert('Complete todos los campos');
       return;
     }
-    
+
     const data = {
       nombre: formOp.nombre,
       costo: parseFloat(formOp.costo),
@@ -251,7 +252,7 @@ function App() {
 
   // CRUD ASIGNACIONES
   const asignarOperacion = async () => {
-    if (!formAsig.empleado_id || !formAsig.operacion_id || !formAsig.cantidad) {
+    if (!formAsig.empleado_id || !formAsig.prenda_id || !formAsig.operacion_id || !formAsig.cantidad) {
       alert('Complete todos los campos');
       return;
     }
@@ -261,6 +262,7 @@ function App() {
 
     const data = {
       empleado_id: parseInt(formAsig.empleado_id),
+      prenda_id: parseInt(formAsig.prenda_id),  // ← AGREGAR
       operacion_id: parseInt(formAsig.operacion_id),
       cantidad: parseInt(formAsig.cantidad),
       talla: formAsig.talla,
@@ -274,10 +276,11 @@ function App() {
       alert('Error: ' + error.message);
     } else {
       alert('✓ Operación asignada');
-      setFormAsig({ 
-        empleado_id: '', 
-        operacion_id: '', 
-        cantidad: '', 
+      setFormAsig({
+        empleado_id: '',
+        prenda_id: '',
+        operacion_id: '',
+        cantidad: '',
         talla: 'S',
         fecha: new Date().toISOString().split('T')[0]
       });
@@ -286,7 +289,17 @@ function App() {
   };
 
   const toggleCompletado = async (id, completado) => {
-    const { error } = await supabase.from('asignaciones').update({ completado: !completado }).eq('id', id);
+    const updates = { completado: !completado };
+
+    // Si se está marcando como completado, agregar fecha de terminación
+    if (!completado) {
+      updates.fecha_terminado = new Date().toISOString().split('T')[0];
+    } else {
+      // Si se está revirtiendo, quitar fecha de terminación
+      updates.fecha_terminado = null;
+    }
+
+    const { error } = await supabase.from('asignaciones').update(updates).eq('id', id);
     if (error) alert('Error: ' + error.message);
     else cargarDatos();
   };
@@ -317,14 +330,14 @@ function App() {
     }
 
     const asignacionesFiltradas = asignaciones.filter(a => {
-      if (!a.completado) return false;
+      if (!a.completado || !a.fecha_terminado) return false;
       if (empId && a.empleado_id !== empId) return false;
-      
-      const fechaAsig = new Date(a.fecha);
+
+      const fechaTerm = new Date(a.fecha_terminado);
       const fechaInicio = new Date(filtroFechaInicio);
       const fechaFin = new Date(filtroFechaFin);
-      
-      return fechaAsig >= fechaInicio && fechaAsig <= fechaFin;
+
+      return fechaTerm >= fechaInicio && fechaTerm <= fechaFin;
     });
 
     return asignacionesFiltradas.reduce((sum, a) => sum + parseFloat(a.monto), 0);
@@ -338,11 +351,11 @@ function App() {
 
     const reporte = empleados.map(emp => {
       const asignacionesEmp = asignaciones.filter(a => {
-        if (!a.completado || a.empleado_id !== emp.id) return false;
-        const fechaAsig = new Date(a.fecha);
+        if (!a.completado || !a.fecha_terminado || a.empleado_id !== emp.id) return false;
+        const fechaTerm = new Date(a.fecha_terminado);
         const fechaInicio = new Date(filtroFechaInicio);
         const fechaFin = new Date(filtroFechaFin);
-        return fechaAsig >= fechaInicio && fechaAsig <= fechaFin;
+        return fechaTerm >= fechaInicio && fechaTerm <= fechaFin;
       });
 
       const totalPiezas = asignacionesEmp.reduce((sum, a) => sum + a.cantidad, 0);
@@ -361,11 +374,12 @@ function App() {
     setNominaFiltrada(reporte);
   };
 
+
   const setRangoRapido = (dias) => {
     const hoy = new Date();
     const inicio = new Date();
     inicio.setDate(hoy.getDate() - dias);
-    
+
     setFiltroFechaInicio(inicio.toISOString().split('T')[0]);
     setFiltroFechaFin(hoy.toISOString().split('T')[0]);
   };
@@ -414,7 +428,7 @@ function App() {
             <h1 className="text-3xl font-bold text-gray-800">Sistema de Producción</h1>
             <p className="text-gray-600 mt-2">Gestión de Confección</p>
           </div>
-          
+
           <div className="space-y-4">
             <input
               type="text"
@@ -438,7 +452,7 @@ function App() {
               Iniciar Sesión
             </button>
           </div>
-          
+
           <div className="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded">
             <p className="font-semibold mb-2">Usuarios:</p>
             <p>Admin: admin / admin123</p>
@@ -465,102 +479,139 @@ function App() {
         <div className="max-w-7xl mx-auto p-6">
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-xl font-bold mb-4">Asignar Operación</h2>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <select
-                value={formAsig.empleado_id}
-                onChange={(e) => setFormAsig({...formAsig, empleado_id: e.target.value})}
-                className="px-3 py-2 border rounded-lg"
-              >
-                <option value="">Empleado</option>
-                {empleados.map(e => <option key={e.id} value={e.id}>ID:{e.id} {e.nombre}</option>)}
-              </select>
-              
-              <select
-                value={formAsig.operacion_id}
-                onChange={(e) => setFormAsig({...formAsig, operacion_id: e.target.value})}
-                className="px-3 py-2 border rounded-lg"
-              >
-                <option value="">Operación</option>
-                {operaciones.map(o => <option key={o.id} value={o.id}>{o.nombre} ${o.costo}</option>)}
-              </select>
-              
-              <input
-                type="number"
-                value={formAsig.cantidad}
-                onChange={(e) => setFormAsig({...formAsig, cantidad: e.target.value})}
-                className="px-3 py-2 border rounded-lg"
-                placeholder="Cantidad"
-              />
-              
-              <select
-                value={formAsig.talla}
-                onChange={(e) => setFormAsig({...formAsig, talla: e.target.value})}
-                className="px-3 py-2 border rounded-lg"
-              >
-                {['S','M','L','XL','2XL','3XL'].map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              
-              <button
-                onClick={asignarOperacion}
-                disabled={loading}
-                className="bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-              >
-                Asignar
-              </button>
-            </div>
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ID Empleado</label>
+                <select
+                  value={formAsig.empleado_id}
+                  onChange={(e) => setFormAsig({ ...formAsig, empleado_id: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Seleccione</option>
+                  {empleados.map(emp => (
+                    <option key={emp.id} value={emp.id}>ID:{emp.id} {emp.nombre}</option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-4">Asignaciones Recientes</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left">ID</th>
-                    <th className="px-3 py-2 text-left">Empleado</th>
-                    <th className="px-3 py-2 text-left">Operación</th>
-                    <th className="px-3 py-2 text-left">Cant</th>
-                    <th className="px-3 py-2 text-left">Talla</th>
-                    <th className="px-3 py-2 text-left">Monto</th>
-                    <th className="px-3 py-2 text-left">Estado</th>
-                    <th className="px-3 py-2 text-left">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {asignaciones.slice(0, 50).map(a => {
-                    const emp = empleados.find(e => e.id === a.empleado_id);
-                    const op = operaciones.find(o => o.id === a.operacion_id);
-                    return (
-                      <tr key={a.id} className="border-t">
-                        <td className="px-3 py-2">{emp?.id}</td>
-                        <td className="px-3 py-2">{emp?.nombre}</td>
-                        <td className="px-3 py-2">{op?.nombre}</td>
-                        <td className="px-3 py-2">{a.cantidad}</td>
-                        <td className="px-3 py-2">{a.talla}</td>
-                        <td className="px-3 py-2 font-bold">${parseFloat(a.monto).toLocaleString()}</td>
-                        <td className="px-3 py-2">
-                          <span className={`px-2 py-1 rounded text-xs ${a.completado ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {a.completado ? 'OK' : 'Pend'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2">
-                          <button
-                            onClick={() => toggleCompletado(a.id, a.completado)}
-                            disabled={loading}
-                            className={`px-3 py-1 rounded text-xs font-semibold ${
-                              a.completado 
-                                ? 'bg-gray-500 text-white hover:bg-gray-600' 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Prenda</label>
+                <select
+                  value={formAsig.prenda_id}
+                  onChange={(e) => setFormAsig({ ...formAsig, prenda_id: e.target.value, operacion_id: '' })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Seleccione</option>
+                  {prendas.map(p => (
+                    <option key={p.id} value={p.id}>{p.referencia}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Operación</label>
+                <select
+                  value={formAsig.operacion_id}
+                  onChange={(e) => setFormAsig({ ...formAsig, operacion_id: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  disabled={!formAsig.prenda_id}
+                >
+                  <option value="">Seleccione</option>
+                  {operaciones
+                    .filter(op => op.prenda_id === parseInt(formAsig.prenda_id))
+                    .map(op => (
+                      <option key={op.id} value={op.id}>{op.nombre} - ${op.costo}</option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cantidad</label>
+                <input
+                  type="number"
+                  value={formAsig.cantidad}
+                  onChange={(e) => setFormAsig({ ...formAsig, cantidad: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Talla</label>
+                <select
+                  value={formAsig.talla}
+                  onChange={(e) => setFormAsig({ ...formAsig, talla: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={asignarOperacion}
+                  disabled={loading}
+                  className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                >
+                  Asignar
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold mb-4">Asignaciones Recientes</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left">ID</th>
+                      <th className="px-3 py-2 text-left">Empleado</th>
+                      <th className="px-3 py-2 text-left">Prenda</th>
+                      <th className="px-3 py-2 text-left">Operación</th>
+                      <th className="px-3 py-2 text-left">Cant</th>
+                      <th className="px-3 py-2 text-left">Talla</th>
+                      <th className="px-3 py-2 text-left">Monto</th>
+                      <th className="px-3 py-2 text-left">Estado</th>
+                      <th className="px-3 py-2 text-left">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {asignaciones.slice(0, 50).map(a => {
+                      const emp = empleados.find(e => e.id === a.empleado_id);
+                      const prenda = prendas.find(p => p.id === a.prenda_id);
+                      const op = operaciones.find(o => o.id === a.operacion_id);
+                      return (
+                        <tr key={a.id} className="border-t">
+                          <td className="px-3 py-2">{emp?.id}</td>
+                          <td className="px-3 py-2">{emp?.nombre}</td>
+                          <td className="px-3 py-2">{prenda?.referencia}</td>
+                          <td className="px-3 py-2">{op?.nombre}</td>
+                          <td className="px-3 py-2">{a.cantidad}</td>
+                          <td className="px-3 py-2">{a.talla}</td>
+                          <td className="px-3 py-2 font-bold">${parseFloat(a.monto).toLocaleString()}</td>
+                          <td className="px-3 py-2">
+                            <span className={`px-2 py-1 rounded text-xs ${a.completado ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              {a.completado ? 'OK' : 'Pend'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <button
+                              onClick={() => toggleCompletado(a.id, a.completado)}
+                              disabled={loading}
+                              className={`px-3 py-1 rounded text-xs font-semibold ${a.completado
+                                ? 'bg-gray-500 text-white hover:bg-gray-600'
                                 : 'bg-green-600 text-white hover:bg-green-700'
-                            } disabled:bg-gray-300`}
-                          >
-                            {a.completado ? 'Revertir' : 'Completar'}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                                } disabled:bg-gray-300`}
+                            >
+                              {a.completado ? 'Revertir' : 'Completar'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -568,7 +619,7 @@ function App() {
     );
   }
 
-  const NavBtn = ({view, icon: Icon, label}) => (
+  const NavBtn = ({ view, icon: Icon, label }) => (
     <button
       onClick={() => setActiveView(view)}
       className={`px-3 py-2 rounded text-sm ${activeView === view ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
@@ -604,7 +655,7 @@ function App() {
 
       <div className="max-w-7xl mx-auto p-6">
         {loading && <div className="text-center py-4">Cargando...</div>}
-        
+
         {activeView === 'dashboard' && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -617,7 +668,7 @@ function App() {
                   <User className="w-10 h-10 text-blue-600" />
                 </div>
               </div>
-              
+
               <div className="bg-white rounded-lg shadow p-4">
                 <div className="flex justify-between items-center">
                   <div>
@@ -627,7 +678,7 @@ function App() {
                   <Clock className="w-10 h-10 text-yellow-600" />
                 </div>
               </div>
-              
+
               <div className="bg-white rounded-lg shadow p-4">
                 <div className="flex justify-between items-center">
                   <div>
@@ -637,7 +688,7 @@ function App() {
                   <Package className="w-10 h-10 text-green-600" />
                 </div>
               </div>
-              
+
               <div className="bg-white rounded-lg shadow p-4">
                 <div className="flex justify-between items-center">
                   <div>
@@ -705,6 +756,7 @@ function App() {
                     <tr>
                       <th className="px-2 py-2 text-left">ID Emp</th>
                       <th className="px-2 py-2 text-left">Empleado</th>
+                      <th className="px-3 py-2 text-left">Prenda</th>
                       <th className="px-2 py-2 text-left">Operación</th>
                       <th className="px-2 py-2 text-left">Cant</th>
                       <th className="px-2 py-2 text-left">Talla</th>
@@ -717,10 +769,12 @@ function App() {
                     {asignaciones.map(a => {
                       const emp = empleados.find(e => e.id === a.empleado_id);
                       const op = operaciones.find(o => o.id === a.operacion_id);
+                      const prenda = prendas.find(p => p.id === a.prenda_id);
                       return (
                         <tr key={a.id} className="border-t hover:bg-gray-50">
                           <td className="px-2 py-2">{emp?.id}</td>
                           <td className="px-2 py-2">{emp?.nombre}</td>
+                          <td className="px-3 py-2">{prenda?.referencia}</td>
                           <td className="px-2 py-2">{op?.nombre}</td>
                           <td className="px-2 py-2">{a.cantidad}</td>
                           <td className="px-2 py-2">{a.talla}</td>
@@ -757,48 +811,83 @@ function App() {
         {activeView === 'asignar' && (
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">Nueva Asignación</h2>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <select
-                value={formAsig.empleado_id}
-                onChange={(e) => setFormAsig({...formAsig, empleado_id: e.target.value})}
-                className="px-3 py-2 border rounded"
-              >
-                <option value="">Empleado</option>
-                {empleados.map(e => <option key={e.id} value={e.id}>ID:{e.id} {e.nombre}</option>)}
-              </select>
-              
-              <select
-                value={formAsig.operacion_id}
-                onChange={(e) => setFormAsig({...formAsig, operacion_id: e.target.value})}
-                className="px-3 py-2 border rounded"
-              >
-                <option value="">Operación</option>
-                {operaciones.map(o => <option key={o.id} value={o.id}>{o.nombre} ${o.costo}</option>)}
-              </select>
-              
-              <input
-                type="number"
-                value={formAsig.cantidad}
-                onChange={(e) => setFormAsig({...formAsig, cantidad: e.target.value})}
-                className="px-3 py-2 border rounded"
-                placeholder="Cantidad"
-              />
-              
-              <select
-                value={formAsig.talla}
-                onChange={(e) => setFormAsig({...formAsig, talla: e.target.value})}
-                className="px-3 py-2 border rounded"
-              >
-              {['S','M','L','XL','2XL','3XL'].map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              
-              <button
-                onClick={asignarOperacion}
-                disabled={loading}
-                className="bg-green-600 text-white py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
-              >
-                Asignar
-              </button>
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ID Empleado</label>
+                <select
+                  value={formAsig.empleado_id}
+                  onChange={(e) => setFormAsig({ ...formAsig, empleado_id: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Seleccione</option>
+                  {empleados.map(emp => (
+                    <option key={emp.id} value={emp.id}>ID:{emp.id} {emp.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Prenda</label>
+                <select
+                  value={formAsig.prenda_id}
+                  onChange={(e) => setFormAsig({ ...formAsig, prenda_id: e.target.value, operacion_id: '' })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Seleccione</option>
+                  {prendas.map(p => (
+                    <option key={p.id} value={p.id}>{p.referencia}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Operación</label>
+                <select
+                  value={formAsig.operacion_id}
+                  onChange={(e) => setFormAsig({ ...formAsig, operacion_id: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  disabled={!formAsig.prenda_id}
+                >
+                  <option value="">Seleccione</option>
+                  {operaciones
+                    .filter(op => op.prenda_id === parseInt(formAsig.prenda_id))
+                    .map(op => (
+                      <option key={op.id} value={op.id}>{op.nombre} - ${op.costo}</option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cantidad</label>
+                <input
+                  type="number"
+                  value={formAsig.cantidad}
+                  onChange={(e) => setFormAsig({ ...formAsig, cantidad: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Talla</label>
+                <select
+                  value={formAsig.talla}
+                  onChange={(e) => setFormAsig({ ...formAsig, talla: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={asignarOperacion}
+                  disabled={loading}
+                  className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                >
+                  Asignar
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -811,13 +900,13 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <input
                 value={formEmp.nombre}
-                onChange={(e) => setFormEmp({...formEmp, nombre: e.target.value})}
+                onChange={(e) => setFormEmp({ ...formEmp, nombre: e.target.value })}
                 className="px-3 py-2 border rounded"
                 placeholder="Nombre"
               />
               <input
                 value={formEmp.telefono}
-                onChange={(e) => setFormEmp({...formEmp, telefono: e.target.value})}
+                onChange={(e) => setFormEmp({ ...formEmp, telefono: e.target.value })}
                 className="px-3 py-2 border rounded"
                 placeholder="Teléfono"
               />
@@ -885,13 +974,13 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <input
                 value={formPrenda.referencia}
-                onChange={(e) => setFormPrenda({...formPrenda, referencia: e.target.value})}
+                onChange={(e) => setFormPrenda({ ...formPrenda, referencia: e.target.value })}
                 className="px-3 py-2 border rounded"
                 placeholder="Referencia"
               />
               <input
                 value={formPrenda.descripcion}
-                onChange={(e) => setFormPrenda({...formPrenda, descripcion: e.target.value})}
+                onChange={(e) => setFormPrenda({ ...formPrenda, descripcion: e.target.value })}
                 className="px-3 py-2 border rounded"
                 placeholder="Descripción"
               />
@@ -959,20 +1048,20 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <input
                 value={formOp.nombre}
-                onChange={(e) => setFormOp({...formOp, nombre: e.target.value})}
+                onChange={(e) => setFormOp({ ...formOp, nombre: e.target.value })}
                 className="px-3 py-2 border rounded"
                 placeholder="Nombre operación"
               />
               <input
                 type="number"
                 value={formOp.costo}
-                onChange={(e) => setFormOp({...formOp, costo: e.target.value})}
+                onChange={(e) => setFormOp({ ...formOp, costo: e.target.value })}
                 className="px-3 py-2 border rounded"
                 placeholder="Costo"
               />
               <select
                 value={formOp.prenda_id}
-                onChange={(e) => setFormOp({...formOp, prenda_id: e.target.value})}
+                onChange={(e) => setFormOp({ ...formOp, prenda_id: e.target.value })}
                 className="px-3 py-2 border rounded"
               >
                 <option value="">Seleccionar prenda</option>
@@ -1038,377 +1127,437 @@ function App() {
             </div>
           </div>
         )}
-    </div>
-      
-        {activeView === 'taller' && (() => {
-  const hoy = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const hora = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-
-  const filtrarAsignacionesPorPeriodo = () => {
-    const hoyDate = new Date();
-    hoyDate.setHours(0, 0, 0, 0);
-    
-    switch(filtroTaller) {
-      case 'hoy':
-        return asignaciones.filter(a => {
-          const fechaAsig = new Date(a.fecha);
-          fechaAsig.setHours(0, 0, 0, 0);
-          return fechaAsig.getTime() === hoyDate.getTime();
-        });
-      case 'ayer':
-        const ayer = new Date(hoyDate);
-        ayer.setDate(ayer.getDate() - 1);
-        return asignaciones.filter(a => {
-          const fechaAsig = new Date(a.fecha);
-          fechaAsig.setHours(0, 0, 0, 0);
-          return fechaAsig.getTime() === ayer.getTime();
-        });
-      case '5dias':
-        const hace5 = new Date(hoyDate);
-        hace5.setDate(hace5.getDate() - 5);
-        return asignaciones.filter(a => {
-          const fechaAsig = new Date(a.fecha);
-          return fechaAsig >= hace5 && fechaAsig <= hoyDate;
-        });
-      case '10dias':
-        const hace10 = new Date(hoyDate);
-        hace10.setDate(hace10.getDate() - 10);
-        return asignaciones.filter(a => {
-          const fechaAsig = new Date(a.fecha);
-          return fechaAsig >= hace10 && fechaAsig <= hoyDate;
-        });
-      case '15dias':
-        const hace15 = new Date(hoyDate);
-        hace15.setDate(hace15.getDate() - 15);
-        return asignaciones.filter(a => {
-          const fechaAsig = new Date(a.fecha);
-          return fechaAsig >= hace15 && fechaAsig <= hoyDate;
-        });
-      case 'mes':
-        const hace30 = new Date(hoyDate);
-        hace30.setDate(hace30.getDate() - 30);
-        return asignaciones.filter(a => {
-          const fechaAsig = new Date(a.fecha);
-          return fechaAsig >= hace30 && fechaAsig <= hoyDate;
-        });
-      case 'todo':
-      default:
-        return asignaciones;
-    }
-  };
-
-  const asignacionesFiltradas = filtrarAsignacionesPorPeriodo();
-  const pendientesFiltradas = asignacionesFiltradas.filter(a => !a.completado);
-  const completadasFiltradas = asignacionesFiltradas.filter(a => a.completado);
-
-  const obtenerTituloPeriodo = () => {
-    switch(filtroTaller) {
-      case 'hoy': return 'HOY';
-      case 'ayer': return 'AYER';
-      case '5dias': return 'ÚLTIMOS 5 DÍAS';
-      case '10dias': return 'ÚLTIMOS 10 DÍAS';
-      case '15dias': return 'ÚLTIMOS 15 DÍAS';
-      case 'mes': return 'ÚLTIMO MES';
-      case 'todo': return 'HISTÓRICO COMPLETO';
-      default: return 'PERÍODO';
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">PANEL DE PRODUCCIÓN</h1>
-            <p className="text-xl opacity-90 capitalize">{hoy}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-5xl font-bold">{hora}</p>
-            <button
-              onClick={() => setActiveView('dashboard')}
-              className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700 text-sm"
-            >
-              Salir Pantalla Completa
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-white bg-opacity-10 rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <p className="text-lg font-semibold">Período: {obtenerTituloPeriodo()}</p>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setFiltroTaller('hoy')}
-                className={`px-4 py-2 rounded font-semibold transition-all ${
-                  filtroTaller === 'hoy' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
-                }`}
-              >
-                Hoy
-              </button>
-              <button
-                onClick={() => setFiltroTaller('ayer')}
-                className={`px-4 py-2 rounded font-semibold transition-all ${
-                  filtroTaller === 'ayer' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
-                }`}
-              >
-                Ayer
-              </button>
-              <button
-                onClick={() => setFiltroTaller('5dias')}
-                className={`px-4 py-2 rounded font-semibold transition-all ${
-                  filtroTaller === '5dias' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
-                }`}
-              >
-                5 Días
-              </button>
-              <button
-                onClick={() => setFiltroTaller('10dias')}
-                className={`px-4 py-2 rounded font-semibold transition-all ${
-                  filtroTaller === '10dias' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
-                }`}
-              >
-                10 Días
-              </button>
-              <button
-                onClick={() => setFiltroTaller('15dias')}
-                className={`px-4 py-2 rounded font-semibold transition-all ${
-                  filtroTaller === '15dias' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
-                }`}
-              >
-                15 Días
-              </button>
-              <button
-                onClick={() => setFiltroTaller('mes')}
-                className={`px-4 py-2 rounded font-semibold transition-all ${
-                  filtroTaller === 'mes' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
-                }`}
-              >
-                Mes
-              </button>
-              <button
-                onClick={() => setFiltroTaller('todo')}
-                className={`px-4 py-2 rounded font-semibold transition-all ${
-                  filtroTaller === 'todo' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
-                }`}
-              >
-                Todo
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white bg-opacity-10 rounded-lg p-6">
-            <p className="text-sm opacity-80 mb-2">TOTAL</p>
-            <p className="text-5xl font-bold">{asignacionesFiltradas.length}</p>
-          </div>
-          <div className="bg-yellow-500 bg-opacity-20 rounded-lg p-6">
-            <p className="text-sm opacity-80 mb-2">PENDIENTES</p>
-            <p className="text-5xl font-bold">{pendientesFiltradas.length}</p>
-          </div>
-          <div className="bg-green-500 bg-opacity-20 rounded-lg p-6">
-            <p className="text-sm opacity-80 mb-2">COMPLETADAS</p>
-            <p className="text-5xl font-bold">{completadasFiltradas.length}</p>
-          </div>
-          <div className="bg-purple-500 bg-opacity-20 rounded-lg p-6">
-            <p className="text-sm opacity-80 mb-2">PRODUCTIVIDAD</p>
-            <p className="text-5xl font-bold">
-              {asignacionesFiltradas.length > 0 ? Math.round((completadasFiltradas.length / asignacionesFiltradas.length) * 100) : 0}%
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white bg-opacity-10 rounded-lg p-6 mb-6">
-          <h2 className="text-3xl font-bold mb-4 flex items-center">
-            <Clock className="w-8 h-8 mr-3" /> OPERACIONES PENDIENTES
-          </h2>
-          {pendientesFiltradas.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-              {pendientesFiltradas.map(a => {
-                const emp = empleados.find(e => e.id === a.empleado_id);
-                const op = operaciones.find(o => o.id === a.operacion_id);
-                return (
-                  <div key={a.id} className="bg-yellow-500 bg-opacity-20 rounded-lg p-4">
-                    <div className="flex justify-between items-center">
-                      <div className="flex-1">
-                        <p className="text-2xl font-bold">ID: {emp?.id} - {emp?.nombre}</p>
-                        <p className="text-xl opacity-90 mt-1">{op?.nombre}</p>
-                        <p className="text-sm opacity-70 mt-1">Fecha: {new Date(a.fecha).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-3xl font-bold">{a.cantidad} und</p>
-                        <p className="text-lg opacity-90">Talla: {a.talla}</p>
-                      </div>
-                      <div className="ml-6 text-right">
-                        <p className="text-sm opacity-80">Valor</p>
-                        <p className="text-3xl font-bold text-yellow-300">${parseFloat(a.monto).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-center text-2xl opacity-60 py-8">No hay operaciones pendientes en este período</p>
-          )}
-        </div>
-
-        <div className="bg-white bg-opacity-10 rounded-lg p-6">
-          <h2 className="text-3xl font-bold mb-4 flex items-center">
-            <BarChart3 className="w-8 h-8 mr-3" /> ÚLTIMAS COMPLETADAS
-          </h2>
-          {completadasFiltradas.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-              {completadasFiltradas.slice(0, 10).map(a => {
-                const emp = empleados.find(e => e.id === a.empleado_id);
-                const op = operaciones.find(o => o.id === a.operacion_id);
-                return (
-                  <div key={a.id} className="bg-green-500 bg-opacity-20 rounded-lg p-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-lg font-bold">ID: {emp?.id} - {emp?.nombre}</p>
-                        <p className="text-sm opacity-90">{op?.nombre} • {a.cantidad} und • {a.talla}</p>
-                        <p className="text-xs opacity-70 mt-1">{new Date(a.fecha).toLocaleDateString()}</p>
-                      </div>
-                      <p className="text-xl font-bold text-green-300">${parseFloat(a.monto).toLocaleString()}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-center text-2xl opacity-60 py-8">No hay operaciones completadas en este período</p>
-          )}
-        </div>
-
-        <div className="mt-6 text-center opacity-60">
-          <p className="text-sm">Actualización automática cada 30 segundos</p>
-        </div>
       </div>
-    </div>
-  );
-})()}
 
+      {activeView === 'taller' && (() => {
+        const hoy = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const hora = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
 
-        {activeView === 'nomina' && (
-          <div>
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h2 className="text-xl font-bold mb-4">Cálculo de Nómina por Período</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        const filtrarAsignacionesPorPeriodo = () => {
+          const hoyDate = new Date();
+          hoyDate.setHours(0, 0, 0, 0);
+
+          switch (filtroTaller) {
+            case 'hoy':
+              return asignaciones.filter(a => {
+                const fechaAsig = new Date(a.fecha);
+                fechaAsig.setHours(0, 0, 0, 0);
+                return fechaAsig.getTime() === hoyDate.getTime();
+              });
+            case 'ayer':
+              const ayer = new Date(hoyDate);
+              ayer.setDate(ayer.getDate() - 1);
+              return asignaciones.filter(a => {
+                const fechaAsig = new Date(a.fecha);
+                fechaAsig.setHours(0, 0, 0, 0);
+                return fechaAsig.getTime() === ayer.getTime();
+              });
+            case '5dias':
+              const hace5 = new Date(hoyDate);
+              hace5.setDate(hace5.getDate() - 5);
+              return asignaciones.filter(a => {
+                const fechaAsig = new Date(a.fecha);
+                return fechaAsig >= hace5 && fechaAsig <= hoyDate;
+              });
+            case '10dias':
+              const hace10 = new Date(hoyDate);
+              hace10.setDate(hace10.getDate() - 10);
+              return asignaciones.filter(a => {
+                const fechaAsig = new Date(a.fecha);
+                return fechaAsig >= hace10 && fechaAsig <= hoyDate;
+              });
+            case '15dias':
+              const hace15 = new Date(hoyDate);
+              hace15.setDate(hace15.getDate() - 15);
+              return asignaciones.filter(a => {
+                const fechaAsig = new Date(a.fecha);
+                return fechaAsig >= hace15 && fechaAsig <= hoyDate;
+              });
+            case 'mes':
+              const hace30 = new Date(hoyDate);
+              hace30.setDate(hace30.getDate() - 30);
+              return asignaciones.filter(a => {
+                const fechaAsig = new Date(a.fecha);
+                return fechaAsig >= hace30 && fechaAsig <= hoyDate;
+              });
+            case 'todo':
+            default:
+              return asignaciones;
+          }
+        };
+
+        const asignacionesFiltradas = filtrarAsignacionesPorPeriodo();
+        const pendientesFiltradas = asignacionesFiltradas.filter(a => !a.completado);
+        const completadasFiltradas = asignacionesFiltradas.filter(a => a.completado);
+
+        const obtenerTituloPeriodo = () => {
+          switch (filtroTaller) {
+            case 'hoy': return 'HOY';
+            case 'ayer': return 'AYER';
+            case '5dias': return 'ÚLTIMOS 5 DÍAS';
+            case '10dias': return 'ÚLTIMOS 10 DÍAS';
+            case '15dias': return 'ÚLTIMOS 15 DÍAS';
+            case 'mes': return 'ÚLTIMO MES';
+            case 'todo': return 'HISTÓRICO COMPLETO';
+            default: return 'PERÍODO';
+          }
+        };
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 text-white p-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex justify-between items-center mb-6">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Fecha Inicio</label>
-                  <input
-                    type="date"
-                    value={filtroFechaInicio}
-                    onChange={(e) => setFiltroFechaInicio(e.target.value)}
-                    className="w-full px-3 py-2 border rounded"
-                  />
+                  <h1 className="text-4xl font-bold mb-2">PANEL DE PRODUCCIÓN</h1>
+                  <p className="text-xl opacity-90 capitalize">{hoy}</p>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">Fecha Fin</label>
-                  <input
-                    type="date"
-                    value={filtroFechaFin}
-                    onChange={(e) => setFiltroFechaFin(e.target.value)}
-                    className="w-full px-3 py-2 border rounded"
-                  />
-                </div>
-
-                <div className="flex items-end">
+                <div className="text-right">
+                  <p className="text-5xl font-bold">{hora}</p>
                   <button
-                    onClick={generarReporteNomina}
-                    className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+                    onClick={() => setActiveView('dashboard')}
+                    className="mt-2 px-4 py-2 bg-red-600 rounded hover:bg-red-700 text-sm"
                   >
-                    Calcular Nómina
-                  </button>
-                </div>
-
-                <div className="flex items-end">
-                  <button
-                    onClick={limpiarFiltros}
-                    className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
-                  >
-                    Limpiar Filtros
+                    Salir Pantalla Completa
                   </button>
                 </div>
               </div>
 
-              <div className="flex gap-2 flex-wrap mb-4">
-                <p className="text-sm font-medium">Rangos rápidos:</p>
-                <button onClick={() => setRangoRapido(7)} className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">Últimos 7 días</button>
-                <button onClick={() => setRangoRapido(10)} className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">Últimos 10 días</button>
-                <button onClick={() => setRangoRapido(15)} className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">Últimos 15 días</button>
-                <button onClick={() => setRangoRapido(30)} className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">Último mes</button>
+              <div className="bg-white bg-opacity-10 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <p className="text-lg font-semibold">Período: {obtenerTituloPeriodo()}</p>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => setFiltroTaller('hoy')}
+                      className={`px-4 py-2 rounded font-semibold transition-all ${filtroTaller === 'hoy' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                        }`}
+                    >
+                      Hoy
+                    </button>
+                    <button
+                      onClick={() => setFiltroTaller('ayer')}
+                      className={`px-4 py-2 rounded font-semibold transition-all ${filtroTaller === 'ayer' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                        }`}
+                    >
+                      Ayer
+                    </button>
+                    <button
+                      onClick={() => setFiltroTaller('5dias')}
+                      className={`px-4 py-2 rounded font-semibold transition-all ${filtroTaller === '5dias' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                        }`}
+                    >
+                      5 Días
+                    </button>
+                    <button
+                      onClick={() => setFiltroTaller('10dias')}
+                      className={`px-4 py-2 rounded font-semibold transition-all ${filtroTaller === '10dias' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                        }`}
+                    >
+                      10 Días
+                    </button>
+                    <button
+                      onClick={() => setFiltroTaller('15dias')}
+                      className={`px-4 py-2 rounded font-semibold transition-all ${filtroTaller === '15dias' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                        }`}
+                    >
+                      15 Días
+                    </button>
+                    <button
+                      onClick={() => setFiltroTaller('mes')}
+                      className={`px-4 py-2 rounded font-semibold transition-all ${filtroTaller === 'mes' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                        }`}
+                    >
+                      Mes
+                    </button>
+                    <button
+                      onClick={() => setFiltroTaller('todo')}
+                      className={`px-4 py-2 rounded font-semibold transition-all ${filtroTaller === 'todo' ? 'bg-blue-500 scale-105' : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                        }`}
+                    >
+                      Todo
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {filtroFechaInicio && filtroFechaFin && (
-                <div className="bg-blue-50 p-4 rounded">
-                  <p className="text-sm">
-                    Período seleccionado: <strong>{new Date(filtroFechaInicio).toLocaleDateString()}</strong> al <strong>{new Date(filtroFechaFin).toLocaleDateString()}</strong>
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="bg-white bg-opacity-10 rounded-lg p-6">
+                  <p className="text-sm opacity-80 mb-2">TOTAL</p>
+                  <p className="text-5xl font-bold">{asignacionesFiltradas.length}</p>
+                </div>
+                <div className="bg-yellow-500 bg-opacity-20 rounded-lg p-6">
+                  <p className="text-sm opacity-80 mb-2">PENDIENTES</p>
+                  <p className="text-5xl font-bold">{pendientesFiltradas.length}</p>
+                </div>
+                <div className="bg-green-500 bg-opacity-20 rounded-lg p-6">
+                  <p className="text-sm opacity-80 mb-2">COMPLETADAS</p>
+                  <p className="text-5xl font-bold">{completadasFiltradas.length}</p>
+                </div>
+                <div className="bg-purple-500 bg-opacity-20 rounded-lg p-6">
+                  <p className="text-sm opacity-80 mb-2">PRODUCTIVIDAD</p>
+                  <p className="text-5xl font-bold">
+                    {asignacionesFiltradas.length > 0 ? Math.round((completadasFiltradas.length / asignacionesFiltradas.length) * 100) : 0}%
                   </p>
                 </div>
-              )}
+              </div>
+
+              <div className="bg-white bg-opacity-10 rounded-lg p-6 mb-6">
+                <h2 className="text-3xl font-bold mb-4 flex items-center">
+                  <Clock className="w-8 h-8 mr-3" /> OPERACIONES PENDIENTES
+                </h2>
+                {pendientesFiltradas.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
+                    {pendientesFiltradas.map(a => {
+                      const emp = empleados.find(e => e.id === a.empleado_id);
+                      const op = operaciones.find(o => o.id === a.operacion_id);
+                      const prenda = prendas.find(p => p.id === op?.prenda_id);
+                      return (
+                        <div key={a.id} className="bg-yellow-500 bg-opacity-20 rounded-lg p-4">
+                          <div className="flex justify-between items-center">
+                            <div className="flex-1">
+                              <p className="text-2xl font-bold">ID: {emp?.id} - {emp?.nombre}</p>
+                              <p className="text-xl opacity-90 mt-1">{op?.nombre}</p>
+                              <p className="text-xl opacity-90 mt-1">{prenda?.referencia}</p>
+                              <p className="text-sm opacity-70 mt-1">Fecha: {new Date(a.fecha).toLocaleDateString()}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-3xl font-bold">{a.cantidad} und</p>
+                              <p className="text-lg opacity-90">Talla: {a.talla}</p>
+                            </div>
+                            <div className="ml-6 text-right">
+                              <p className="text-sm opacity-80">Valor</p>
+                              <p className="text-3xl font-bold text-yellow-300">${parseFloat(a.monto).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-center text-2xl opacity-60 py-8">No hay operaciones pendientes en este período</p>
+                )}
+              </div>
+
+              <div className="bg-white bg-opacity-10 rounded-lg p-6">
+                <h2 className="text-3xl font-bold mb-4 flex items-center">
+                  <BarChart3 className="w-8 h-8 mr-3" /> ÚLTIMAS COMPLETADAS
+                </h2>
+                {completadasFiltradas.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                    {completadasFiltradas.slice(0, 10).map(a => {
+                      const emp = empleados.find(e => e.id === a.empleado_id);
+                      const op = operaciones.find(o => o.id === a.operacion_id);
+                      const prenda = prendas.find(p => p.id === op?.prenda_id);
+                      return (
+                        <div key={a.id} className="bg-green-500 bg-opacity-20 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-lg font-bold">ID: {emp?.id} - {emp?.nombre}</p>
+                              <p className="text-sm opacity-90">{op?.nombre} • {a.cantidad} und • {a.talla}</p>
+                              <p className="text-sm opacity-90 mt-1">{prenda?.referencia}</p>
+                              <p className="text-xs opacity-70 mt-1">{new Date(a.fecha).toLocaleDateString()}</p>
+                            </div>
+                            <p className="text-xl font-bold text-green-300">${parseFloat(a.monto).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-center text-2xl opacity-60 py-8">No hay operaciones completadas en este período</p>
+                )}
+              </div>
+
+              <div className="mt-6 text-center opacity-60">
+                <p className="text-sm">Actualización automática cada 30 segundos</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+
+      {activeView === 'nomina' && (
+        <div>
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 className="text-xl font-bold mb-4">Cálculo de Nómina por Período</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Fecha Inicio</label>
+                <input
+                  type="date"
+                  value={filtroFechaInicio}
+                  onChange={(e) => setFiltroFechaInicio(e.target.value)}
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Fecha Fin</label>
+                <input
+                  type="date"
+                  value={filtroFechaFin}
+                  onChange={(e) => setFiltroFechaFin(e.target.value)}
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={generarReporteNomina}
+                  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+                >
+                  Calcular Nómina
+                </button>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={limpiarFiltros}
+                  className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+                >
+                  Limpiar Filtros
+                </button>
+              </div>
             </div>
 
-            {nominaFiltrada && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold">Reporte de Nómina</h3>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Total General</p>
-                    <p className="text-3xl font-bold text-green-600">
-                      ${nominaFiltrada.reduce((sum, r) => sum + r.monto, 0).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
+            <div className="flex gap-2 flex-wrap mb-4">
+              <p className="text-sm font-medium">Rangos rápidos:</p>
+              <button onClick={() => setRangoRapido(7)} className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">Últimos 7 días</button>
+              <button onClick={() => setRangoRapido(10)} className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">Últimos 10 días</button>
+              <button onClick={() => setRangoRapido(15)} className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">Últimos 15 días</button>
+              <button onClick={() => setRangoRapido(30)} className="px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">Último mes</button>
+            </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">ID</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Empleado</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Operaciones</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Piezas</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Monto a Pagar</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {nominaFiltrada.map(r => (
-                        <tr key={r.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3">{r.id}</td>
-                          <td className="px-4 py-3 font-medium">{r.nombre}</td>
-                          <td className="px-4 py-3">{r.operaciones}</td>
-                          <td className="px-4 py-3">{r.piezas}</td>
-                          <td className="px-4 py-3 text-lg font-bold text-green-600">
-                            ${r.monto.toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-gray-50 font-bold">
-                      <tr>
-                        <td colSpan="4" className="px-4 py-3 text-right">TOTAL:</td>
-                        <td className="px-4 py-3 text-lg text-green-600">
-                          ${nominaFiltrada.reduce((sum, r) => sum + r.monto, 0).toLocaleString()}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {!nominaFiltrada && (
-              <div className="bg-gray-50 rounded-lg p-12 text-center">
-                <DollarSign className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Seleccione un rango de fechas y haga clic en "Calcular Nómina"</p>
+            {filtroFechaInicio && filtroFechaFin && (
+              <div className="bg-blue-50 p-4 rounded">
+                <p className="text-sm">
+                  Período seleccionado: <strong>{new Date(filtroFechaInicio).toLocaleDateString()}</strong> al <strong>{new Date(filtroFechaFin).toLocaleDateString()}</strong>
+                </p>
               </div>
             )}
           </div>
-        )}
+
+          {nominaFiltrada && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold">Reporte de Nómina Detallado</h3>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Total General del Período</p>
+                  <p className="text-3xl font-bold text-green-600">
+                    ${nominaFiltrada.reduce((sum, r) => sum + r.monto, 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {nominaFiltrada.map(emp => {
+                const asignacionesDetalle = asignaciones.filter(a => {
+                  if (!a.completado || a.empleado_id !== emp.id) return false;
+                  const fechaAsig = new Date(a.fecha);
+                  const fechaInicio = new Date(filtroFechaInicio);
+                  const fechaFin = new Date(filtroFechaFin);
+                  return fechaAsig >= fechaInicio && fechaAsig <= fechaFin;
+                });
+
+                return (
+                  <div key={emp.id} className="mb-6 border rounded-lg overflow-hidden">
+                    {/* Header del empleado */}
+                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm opacity-90">Empleado ID: {emp.id}</p>
+                          <h4 className="text-2xl font-bold">{emp.nombre}</h4>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm opacity-90">Total a Pagar</p>
+                          <p className="text-3xl font-bold">${emp.monto.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex gap-4 text-sm">
+                        <span className="bg-white bg-opacity-20 px-3 py-1 rounded">
+                          {emp.operaciones} operaciones
+                        </span>
+                        <span className="bg-white bg-opacity-20 px-3 py-1 rounded">
+                          {emp.piezas} piezas totales
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Detalle de operaciones */}
+                    <div className="bg-white">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Fecha Asignada</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Fecha Terminada</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Operación</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Talla</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Cantidad</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Valor Unit.</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {asignacionesDetalle.map(a => {
+                            const op = operaciones.find(o => o.id === a.operacion_id);
+                            return (
+                              <tr key={a.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 text-sm">{new Date(a.fecha).toLocaleDateString()}</td>
+                                <td className="px-4 py-3 text-sm font-medium text-green-600">
+                                  {a.fecha_terminado ? new Date(a.fecha_terminado).toLocaleDateString() : '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm font-medium">{op?.nombre}</td>
+                                <td className="px-4 py-3 text-sm">{a.talla}</td>
+                                <td className="px-4 py-3 text-sm font-semibold">{a.cantidad}</td>
+                                <td className="px-4 py-3 text-sm">${op?.costo.toLocaleString()}</td>
+                                <td className="px-4 py-3 text-sm font-bold text-green-600">
+                                  ${parseFloat(a.monto).toLocaleString()}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot className="bg-gray-50">
+                          <tr>
+                            <td colSpan="5" className="px-4 py-3 text-right font-bold">
+                              TOTAL {emp.nombre}:
+                            </td>
+                            <td className="px-4 py-3 font-bold text-lg text-green-600">
+                              ${emp.monto.toLocaleString()}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Total general */}
+              <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-lg opacity-90">TOTAL GENERAL PERÍODO</p>
+                    <p className="text-sm opacity-75">
+                      Del {new Date(filtroFechaInicio).toLocaleDateString()} al {new Date(filtroFechaFin).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <p className="text-5xl font-bold">
+                    ${nominaFiltrada.reduce((sum, r) => sum + r.monto, 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!nominaFiltrada && (
+            <div className="bg-gray-50 rounded-lg p-12 text-center">
+              <DollarSign className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">Seleccione un rango de fechas y haga clic en "Calcular Nómina"</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
