@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 import { User, Package, Settings, BarChart3, DollarSign, Clock, LogOut, Plus, Trash2, Edit } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -20,10 +20,14 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [filtroTaller, setFiltroTaller] = useState('hoy');
   const [cargandoArchivo, setCargandoArchivo] = useState(false);
+  const [toast, setToast] = useState({ show: false, tipo: '', mensaje: '' });
   const [busquedaEmpleado, setBusquedaEmpleado] = useState('');
   const [busquedaPrenda, setBusquedaPrenda] = useState('');
   const [busquedaOperacion, setBusquedaOperacion] = useState('');
   const [busquedaAsignacion, setBusquedaAsignacion] = useState('');
+  const [paginaOperaciones, setPaginaOperaciones] = useState(1);
+  const [paginaPrendas, setPaginaPrendas] = useState(1);
+  const itemsPorPagina = 20;
 
 
 
@@ -57,6 +61,20 @@ function App() {
   const [editingPrenda, setEditingPrenda] = useState(null);
 
 
+
+  // SISTEMA DE NOTIFICACIONES TOAST
+  const mostrarToast = (tipo, mensaje) => {
+    setToast({ show: true, tipo, mensaje });
+    setTimeout(() => {
+      setToast({ show: false, tipo: '', mensaje: '' });
+    }, 4000);
+  };
+
+  const mostrarExito = (mensaje) => mostrarToast('exito', mensaje);
+  const mostrarError = (mensaje) => mostrarToast('error', mensaje);
+  const mostrarAdvertencia = (mensaje) => mostrarToast('advertencia', mensaje);
+  const mostrarInfo = (mensaje) => mostrarToast('info', mensaje);
+
   // Usuarios hardcodeados (en producción usar Supabase Auth)
   const usuarios = [
     { username: 'admin', password: 'admin123', role: 'admin' },
@@ -71,7 +89,7 @@ function App() {
         supabase.from('empleados').select('*').eq('activo', true).order('id'),
         supabase.from('prendas').select('*').eq('activo', true).order('id'),
         supabase.from('operaciones').select('*').eq('activo', true).order('id'),
-        supabase.from('asignaciones').select('*').order('created_at', { ascending: false })
+        supabase.from('asignaciones').select('*').order('created_at', { ascending: false }).limit(1000)
       ]);
 
       if (empRes.data) setEmpleados(empRes.data);
@@ -80,7 +98,7 @@ function App() {
       if (asigRes.data) setAsignaciones(asigRes.data);
     } catch (error) {
       console.error('Error cargando datos:', error);
-      alert('Error al cargar datos');
+      mostrarError('Error al cargar datos del servidor');
     }
     setLoading(false);
   };
@@ -98,7 +116,7 @@ function App() {
       setCurrentUser(user);
       setActiveView(user.role === 'admin' ? 'dashboard' : 'empleadoView');
     } else {
-      alert('Credenciales incorrectas');
+      mostrarError('Credenciales incorrectas');
     }
   };
 
@@ -112,16 +130,16 @@ function App() {
   // CRUD EMPLEADOS
   const agregarEmpleado = async () => {
     if (!formEmp.nombre || !formEmp.telefono) {
-      alert('Complete todos los campos');
+      mostrarAdvertencia('Complete todos los campos');
       return;
     }
 
     if (editingEmp) {
       const { error } = await supabase.from('empleados').update(formEmp).eq('id', editingEmp.id);
       if (error) {
-        alert('Error: ' + error.message);
+        mostrarError('Error al actualizar: ' + error.message);
       } else {
-        alert('Empleado actualizado');
+        mostrarExito('Empleado actualizado correctamente');
         setEditingEmp(null);
         setFormEmp({ nombre: '', telefono: '' });
         cargarDatos();
@@ -129,9 +147,9 @@ function App() {
     } else {
       const { error } = await supabase.from('empleados').insert([formEmp]);
       if (error) {
-        alert('Error: ' + error.message);
+        mostrarError('Error al agregar: ' + error.message);
       } else {
-        alert('Empleado agregado');
+        mostrarExito('Empleado agregado correctamente');
         setFormEmp({ nombre: '', telefono: '' });
         cargarDatos();
       }
@@ -141,8 +159,11 @@ function App() {
   const eliminarEmpleado = async (id) => {
     if (!confirm('¿Eliminar empleado?')) return;
     const { error } = await supabase.from('empleados').update({ activo: false }).eq('id', id);
-    if (error) alert('Error: ' + error.message);
-    else cargarDatos();
+    if (error) mostrarError('Error al eliminar: ' + error.message);
+    else {
+      mostrarExito('Empleado eliminado correctamente');
+      cargarDatos();
+    }
   };
 
   const editarEmpleado = (emp) => {
@@ -160,16 +181,16 @@ function App() {
   // CRUD PRENDAS
   const agregarPrenda = async () => {
     if (!formPrenda.referencia) {
-      alert('Ingrese la referencia');
+      mostrarAdvertencia('Ingrese la referencia');
       return;
     }
 
     if (editingPrenda) {
       const { error } = await supabase.from('prendas').update(formPrenda).eq('id', editingPrenda.id);
       if (error) {
-        alert('Error: ' + error.message);
+        mostrarError('Error al actualizar: ' + error.message);
       } else {
-        alert('Prenda actualizada');
+        mostrarExito('Prenda actualizada correctamente');
         setEditingPrenda(null);
         setFormPrenda({ referencia: '', descripcion: '' });
         cargarDatos();
@@ -177,9 +198,9 @@ function App() {
     } else {
       const { error } = await supabase.from('prendas').insert([formPrenda]);
       if (error) {
-        alert('Error: ' + error.message);
+        mostrarError('Error al agregar: ' + error.message);
       } else {
-        alert('Prenda agregada');
+        mostrarExito('Prenda agregada correctamente');
         setFormPrenda({ referencia: '', descripcion: '' });
         cargarDatos();
       }
@@ -189,8 +210,11 @@ function App() {
   const eliminarPrenda = async (id) => {
     if (!confirm('¿Eliminar prenda?')) return;
     const { error } = await supabase.from('prendas').update({ activo: false }).eq('id', id);
-    if (error) alert('Error: ' + error.message);
-    else cargarDatos();
+    if (error) mostrarError('Error al eliminar: ' + error.message);
+    else {
+      mostrarExito('Prenda eliminada correctamente');
+      cargarDatos();
+    }
   };
   const editarPrenda = (prenda) => {
     setTimeout(() => {
@@ -206,7 +230,7 @@ function App() {
   // CRUD OPERACIONES
   const agregarOperacion = async () => {
     if (!formOp.nombre || !formOp.costo || !formOp.prenda_id) {
-      alert('Complete todos los campos');
+      mostrarAdvertencia('Complete todos los campos');
       return;
     }
 
@@ -219,9 +243,9 @@ function App() {
     if (editingOp) {
       const { error } = await supabase.from('operaciones').update(data).eq('id', editingOp.id);
       if (error) {
-        alert('Error: ' + error.message);
+        mostrarError('Error al actualizar: ' + error.message);
       } else {
-        alert('✓ Operación actualizada');
+        mostrarExito('Operación actualizada correctamente');
         setEditingOp(null);
         setFormOp({ nombre: '', costo: '', prenda_id: '' });
         cargarDatos();
@@ -229,9 +253,9 @@ function App() {
     } else {
       const { error } = await supabase.from('operaciones').insert([data]);
       if (error) {
-        alert('Error: ' + error.message);
+        mostrarError('Error al agregar: ' + error.message);
       } else {
-        alert('✓ Operación agregada');
+        mostrarExito('Operación agregada correctamente');
         setFormOp({ nombre: '', costo: '', prenda_id: '' });
         cargarDatos();
       }
@@ -253,8 +277,11 @@ function App() {
   const eliminarOperacion = async (id) => {
     if (!confirm('¿Eliminar operación?')) return;
     const { error } = await supabase.from('operaciones').update({ activo: false }).eq('id', id);
-    if (error) alert('Error: ' + error.message);
-    else cargarDatos();
+    if (error) mostrarError('Error al eliminar: ' + error.message);
+    else {
+      mostrarExito('Operación eliminada correctamente');
+      cargarDatos();
+    }
   };
   const descargarPlantillaOperaciones = () => {
     const plantilla = [
@@ -285,7 +312,7 @@ function App() {
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, 'Plantilla_Operaciones.xlsx');
-    alert('✓ Plantilla descargada. Incluye columnas para crear prendas automáticamente.');
+    mostrarExito('Plantilla descargada correctamente');
   };
 
   const cargarArchivoOperaciones = async (event) => {
@@ -301,7 +328,7 @@ function App() {
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
       if (jsonData.length === 0) {
-        alert('El archivo está vacío');
+        mostrarAdvertencia('El archivo está vacío');
         setCargandoArchivo(false);
         return;
       }
@@ -309,7 +336,7 @@ function App() {
       // Validar columnas requeridas
       const primeraFila = jsonData[0];
       if (!primeraFila['Referencia Prenda'] || !primeraFila['Nombre Operación'] || !primeraFila.Costo) {
-        alert('El archivo debe tener las columnas:\n- Referencia Prenda\n- Descripción Prenda (opcional)\n- Nombre Operación\n- Costo');
+        mostrarError('El archivo debe tener las columnas: Referencia Prenda, Descripción Prenda (opcional), Nombre Operación y Costo');
         setCargandoArchivo(false);
         return;
       }
@@ -393,10 +420,10 @@ function App() {
           mensaje += `\n... y ${errores.length - 5} más`;
         }
       }
-      alert(mensaje);
+      mostrarInfo(mensaje);
 
     } catch (error) {
-      alert('Error al procesar el archivo: ' + error.message);
+      mostrarError('Error al procesar el archivo: ' + error.message);
     } finally {
       setCargandoArchivo(false);
       event.target.value = '';
@@ -405,7 +432,7 @@ function App() {
   // CRUD ASIGNACIONES
   const asignarOperacion = async () => {
     if (!formAsig.empleado_id || !formAsig.prenda_id || !formAsig.operacion_id || !formAsig.cantidad) {
-      alert('Complete todos los campos');
+      mostrarAdvertencia('Complete todos los campos');
       return;
     }
 
@@ -425,9 +452,9 @@ function App() {
 
     const { error } = await supabase.from('asignaciones').insert([data]);
     if (error) {
-      alert('Error: ' + error.message);
+      mostrarError('Error al asignar: ' + error.message);
     } else {
-      alert('✓ Operación asignada');
+      mostrarExito('Operación asignada correctamente');
       setFormAsig({
         empleado_id: '',
         prenda_id: '',
@@ -452,15 +479,22 @@ function App() {
     }
 
     const { error } = await supabase.from('asignaciones').update(updates).eq('id', id);
-    if (error) alert('Error: ' + error.message);
-    else cargarDatos();
+    if (error) mostrarError('Error: ' + error.message);
+    else {
+      mostrarExito(completado ? 'Asignación revertida' : 'Asignación completada');
+      cargarDatos();
+    }
+
   };
 
   const eliminarAsignacion = async (id) => {
     if (!confirm('¿Eliminar asignación?')) return;
     const { error } = await supabase.from('asignaciones').delete().eq('id', id);
-    if (error) alert('Error: ' + error.message);
-    else cargarDatos();
+    if (error) mostrarError('Error al eliminar: ' + error.message);
+    else {
+      mostrarExito('Asignación eliminada correctamente');
+      cargarDatos();
+    }
   };
 
   // CÁLCULOS
@@ -497,7 +531,7 @@ function App() {
 
   const generarReporteNomina = () => {
     if (!filtroFechaInicio || !filtroFechaFin) {
-      alert('Seleccione un rango de fechas');
+      mostrarAdvertencia('Seleccione un rango de fechas');
       return;
     }
 
@@ -544,7 +578,7 @@ function App() {
 
   const exportarNominaExcel = () => {
     if (!nominaFiltrada || nominaFiltrada.length === 0) {
-      alert('No hay datos de nómina para exportar. Primero calcula la nómina.');
+      mostrarAdvertencia('No hay datos de nómina para exportar. Primero calcula la nómina.');
       return;
     }
 
@@ -612,46 +646,54 @@ function App() {
     const nombreArchivo = `Nomina_${filtroFechaInicio}_${filtroFechaFin}.xlsx`;
     saveAs(blob, nombreArchivo);
 
-    alert(`Nómina exportada exitosamente: ${nombreArchivo}`);
+    mostrarExito(`Nómina exportada: ${nombreArchivo}`);
   };
   // FUNCIONES DE FILTRADO
-  const empleadosFiltrados = empleados.filter(e =>
-    e.nombre.toLowerCase().includes(busquedaEmpleado.toLowerCase()) ||
-    e.id.toString().includes(busquedaEmpleado) ||
-    e.telefono.includes(busquedaEmpleado)
-  );
-
-  const prendasFiltradas = prendas.filter(p =>
-    p.referencia.toLowerCase().includes(busquedaPrenda.toLowerCase()) ||
-    (p.descripcion && p.descripcion.toLowerCase().includes(busquedaPrenda.toLowerCase())) ||
-    p.id.toString().includes(busquedaPrenda)
-  );
-
-  const operacionesFiltradas = operaciones.filter(o => {
-    const prenda = prendas.find(p => p.id === o.prenda_id);
-    return (
-      o.nombre.toLowerCase().includes(busquedaOperacion.toLowerCase()) ||
-      o.id.toString().includes(busquedaOperacion) ||
-      (prenda && prenda.referencia.toLowerCase().includes(busquedaOperacion.toLowerCase()))
+  const empleadosFiltrados = useMemo(() => {
+    return empleados.filter(e =>
+      e.nombre.toLowerCase().includes(busquedaEmpleado.toLowerCase()) ||
+      e.id.toString().includes(busquedaEmpleado) ||
+      e.telefono.includes(busquedaEmpleado)
     );
-  });
+  }, [empleados, busquedaEmpleado]);
 
-  const asignacionesFiltradas = asignaciones.filter(a => {
-    const emp = empleados.find(e => e.id === a.empleado_id);
-    const op = operaciones.find(o => o.id === a.operacion_id);
-    const prenda = prendas.find(p => p.id === a.prenda_id);
-
-    return (
-      (emp && emp.nombre.toLowerCase().includes(busquedaAsignacion.toLowerCase())) ||
-      (emp && emp.id.toString().includes(busquedaAsignacion)) ||
-      (op && op.nombre.toLowerCase().includes(busquedaAsignacion.toLowerCase())) ||
-      (prenda && prenda.referencia.toLowerCase().includes(busquedaAsignacion.toLowerCase())) ||
-      a.talla.toLowerCase().includes(busquedaAsignacion.toLowerCase())
+  const prendasFiltradas = useMemo(() => {
+    return prendas.filter(p =>
+      p.referencia.toLowerCase().includes(busquedaPrenda.toLowerCase()) ||
+      (p.descripcion && p.descripcion.toLowerCase().includes(busquedaPrenda.toLowerCase())) ||
+      p.id.toString().includes(busquedaPrenda)
     );
-  });
+  }, [prendas, busquedaPrenda]);
 
-  // DATOS PARA GRÁFICOS
-  const getDatosGraficos = () => {
+  const operacionesFiltradas = useMemo(() => {
+    return operaciones.filter(o => {
+      const prenda = prendas.find(p => p.id === o.prenda_id);
+      return (
+        o.nombre.toLowerCase().includes(busquedaOperacion.toLowerCase()) ||
+        o.id.toString().includes(busquedaOperacion) ||
+        (prenda && prenda.referencia.toLowerCase().includes(busquedaOperacion.toLowerCase()))
+      );
+    });
+  }, [operaciones, prendas, busquedaOperacion]);
+
+  const asignacionesFiltradas = useMemo(() => {
+    return asignaciones.filter(a => {
+      const emp = empleados.find(e => e.id === a.empleado_id);
+      const op = operaciones.find(o => o.id === a.operacion_id);
+      const prenda = prendas.find(p => p.id === a.prenda_id);
+
+      return (
+        (emp && emp.nombre.toLowerCase().includes(busquedaAsignacion.toLowerCase())) ||
+        (emp && emp.id.toString().includes(busquedaAsignacion)) ||
+        (op && op.nombre.toLowerCase().includes(busquedaAsignacion.toLowerCase())) ||
+        (prenda && prenda.referencia.toLowerCase().includes(busquedaAsignacion.toLowerCase())) ||
+        a.talla.toLowerCase().includes(busquedaAsignacion.toLowerCase())
+      );
+    });
+  }, [asignaciones, empleados, operaciones, prendas, busquedaAsignacion]);
+
+  // DATOS PARA GRÁFICOS (debe ir ANTES de los returns)
+  const graficos = useMemo(() => {
     const nominaPorEmpleado = empleados.map(emp => ({
       nombre: emp.nombre.split(' ')[0],
       nomina: calcularNominaEmpleado(emp.id)
@@ -675,9 +717,24 @@ function App() {
     })).filter(d => d.cantidad > 0).sort((a, b) => b.cantidad - a.cantidad).slice(0, 5);
 
     return { nominaPorEmpleado, datosProduccion, operacionesMasUsadas };
-  };
+  }, [asignaciones, empleados, operaciones]);
+
+
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+  // PAGINACIÓN
+  const getPaginados = (datos, pagina) => {
+    const inicio = (pagina - 1) * itemsPorPagina;
+    const fin = inicio + itemsPorPagina;
+    return datos.slice(inicio, fin);
+  };
+
+  const operacionesPaginadas = getPaginados(operacionesFiltradas, paginaOperaciones);
+  const prendasPaginadas = getPaginados(prendasFiltradas, paginaPrendas);
+
+  const totalPaginasOperaciones = Math.ceil(operacionesFiltradas.length / itemsPorPagina);
+  const totalPaginasPrendas = Math.ceil(prendasFiltradas.length / itemsPorPagina);
+
   // PANTALLA DE LOGIN
   if (activeView === 'login') {
     return (
@@ -878,7 +935,92 @@ function App() {
       </div>
     );
   }
+  // COMPONENTE TOAST
+  const Toast = () => {
+    if (!toast.show) return null;
 
+    const estilos = {
+      exito: 'bg-green-500 border-green-600',
+      error: 'bg-red-500 border-red-600',
+      advertencia: 'bg-yellow-500 border-yellow-600',
+      info: 'bg-blue-500 border-blue-600'
+    };
+
+    const iconos = {
+      exito: '✓',
+      error: '✕',
+      advertencia: '⚠',
+      info: 'ℹ'
+    };
+
+    return (
+      <div className="fixed top-4 right-4 z-50 animate-slide-in">
+        <div className={`${estilos[toast.tipo]} text-white px-6 py-4 rounded-lg shadow-2xl border-l-4 max-w-md`}>
+          <div className="flex items-start gap-3">
+            <span className="text-2xl font-bold">{iconos[toast.tipo]}</span>
+            <div className="flex-1">
+              <p className="font-semibold text-sm">{toast.mensaje}</p>
+            </div>
+            <button
+              onClick={() => setToast({ show: false, tipo: '', mensaje: '' })}
+              className="text-white hover:text-gray-200 font-bold text-lg"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
+  const Paginacion = ({ paginaActual, totalPaginas, setPagina, totalItems }) => {
+    if (totalPaginas <= 1) return null;
+
+    const inicio = (paginaActual - 1) * itemsPorPagina + 1;
+    const fin = Math.min(paginaActual * itemsPorPagina, totalItems);
+
+    return (
+      <div className="flex justify-between items-center mt-4 px-4 py-3 bg-gray-50 rounded-lg">
+        <div className="text-sm text-gray-600">
+          Mostrando {inicio} - {fin} de {totalItems} registros
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPagina(1)}
+            disabled={paginaActual === 1}
+            className="px-3 py-1 text-sm bg-white border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Primera
+          </button>
+          <button
+            onClick={() => setPagina(paginaActual - 1)}
+            disabled={paginaActual === 1}
+            className="px-3 py-1 text-sm bg-white border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Anterior
+          </button>
+          <span className="text-sm font-medium px-3">
+            Página {paginaActual} de {totalPaginas}
+          </span>
+          <button
+            onClick={() => setPagina(paginaActual + 1)}
+            disabled={paginaActual >= totalPaginas}
+            className="px-3 py-1 text-sm bg-white border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Siguiente
+          </button>
+          <button
+            onClick={() => setPagina(totalPaginas)}
+            disabled={paginaActual >= totalPaginas}
+            className="px-3 py-1 text-sm bg-white border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Última
+          </button>
+        </div>
+      </div>
+    );
+  };
   const NavBtn = ({ view, icon: Icon, label }) => (
     <button
       onClick={() => setActiveView(view)}
@@ -888,11 +1030,10 @@ function App() {
     </button>
   );
 
-  const graficos = getDatosGraficos();
-
   // PANTALLA ADMIN
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast />
       <nav className="bg-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center flex-wrap gap-2">
@@ -1069,87 +1210,165 @@ function App() {
         )}
 
         {activeView === 'asignar' && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Nueva Asignación</h2>
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">ID Empleado</label>
-                <select
-                  value={formAsig.empleado_id}
-                  onChange={(e) => setFormAsig({ ...formAsig, empleado_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="">Seleccione</option>
-                  {empleados.map(emp => (
-                    <option key={emp.id} value={emp.id}>ID:{emp.id} {emp.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Prenda</label>
-                <select
-                  value={formAsig.prenda_id}
-                  onChange={(e) => setFormAsig({ ...formAsig, prenda_id: e.target.value, operacion_id: '' })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="">Seleccione</option>
-                  {prendas.map(p => (
-                    <option key={p.id} value={p.id}>{p.referencia}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Operación</label>
-                <select
-                  value={formAsig.operacion_id}
-                  onChange={(e) => setFormAsig({ ...formAsig, operacion_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  disabled={!formAsig.prenda_id}
-                >
-                  <option value="">Seleccione</option>
-                  {operaciones
-                    .filter(op => op.prenda_id === parseInt(formAsig.prenda_id))
-                    .map(op => (
-                      <option key={op.id} value={op.id}>{op.nombre} - ${op.costo}</option>
+          <>
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h2 className="text-xl font-bold mb-4">Nueva Asignación</h2>
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">ID Empleado</label>
+                  <select
+                    value={formAsig.empleado_id}
+                    onChange={(e) => setFormAsig({ ...formAsig, empleado_id: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">Seleccione</option>
+                    {empleados.map(emp => (
+                      <option key={emp.id} value={emp.id}>ID:{emp.id} {emp.nombre}</option>
                     ))}
-                </select>
-              </div>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Cantidad</label>
-                <input
-                  type="number"
-                  value={formAsig.cantidad}
-                  onChange={(e) => setFormAsig({ ...formAsig, cantidad: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="50"
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Prenda</label>
+                  <select
+                    value={formAsig.prenda_id}
+                    onChange={(e) => setFormAsig({ ...formAsig, prenda_id: e.target.value, operacion_id: '' })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">Seleccione</option>
+                    {prendas.map(p => (
+                      <option key={p.id} value={p.id}>{p.referencia}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Talla</label>
-                <select
-                  value={formAsig.talla}
-                  onChange={(e) => setFormAsig({ ...formAsig, talla: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Operación</label>
+                  <select
+                    value={formAsig.operacion_id}
+                    onChange={(e) => setFormAsig({ ...formAsig, operacion_id: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    disabled={!formAsig.prenda_id}
+                  >
+                    <option value="">Seleccione</option>
+                    {operaciones
+                      .filter(op => op.prenda_id === parseInt(formAsig.prenda_id))
+                      .map(op => (
+                        <option key={op.id} value={op.id}>{op.nombre} - ${op.costo}</option>
+                      ))}
+                  </select>
+                </div>
 
-              <div className="flex items-end">
-                <button
-                  onClick={asignarOperacion}
-                  disabled={loading}
-                  className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                >
-                  Asignar
-                </button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Cantidad</label>
+                  <input
+                    type="number"
+                    value={formAsig.cantidad}
+                    onChange={(e) => setFormAsig({ ...formAsig, cantidad: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Talla</label>
+                  <select
+                    value={formAsig.talla}
+                    onChange={(e) => setFormAsig({ ...formAsig, talla: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    {['S', 'M', 'L', 'XL', '2XL', '3XL'].map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    onClick={asignarOperacion}
+                    disabled={loading}
+                    className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                  >
+                    Asignar
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+
+            {/* TABLA DE ASIGNACIONES */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="font-bold mb-4">Lista de Asignaciones</h3>
+
+              {/* BÚSQUEDA */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  value={busquedaAsignacion}
+                  onChange={(e) => setBusquedaAsignacion(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg"
+                  placeholder="🔍 Buscar por empleado, operación, prenda o talla..."
+                />
+                {busquedaAsignacion && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Mostrando {asignacionesFiltradas.length} de {asignaciones.length} asignaciones
+                  </p>
+                )}
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 py-2 text-left">ID Emp</th>
+                      <th className="px-2 py-2 text-left">Empleado</th>
+                      <th className="px-3 py-2 text-left">Prenda</th>
+                      <th className="px-2 py-2 text-left">Operación</th>
+                      <th className="px-2 py-2 text-left">Cant</th>
+                      <th className="px-2 py-2 text-left">Talla</th>
+                      <th className="px-2 py-2 text-left">Monto</th>
+                      <th className="px-2 py-2 text-left">Estado</th>
+                      <th className="px-2 py-2 text-left">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {asignacionesFiltradas.slice(0, 100).map(a => {
+                      const emp = empleados.find(e => e.id === a.empleado_id);
+                      const op = operaciones.find(o => o.id === a.operacion_id);
+                      const prenda = prendas.find(p => p.id === a.prenda_id);
+                      return (
+                        <tr key={a.id} className="border-t hover:bg-gray-50">
+                          <td className="px-2 py-2">{emp?.id}</td>
+                          <td className="px-2 py-2">{emp?.nombre}</td>
+                          <td className="px-3 py-2">{prenda?.referencia}</td>
+                          <td className="px-2 py-2">{op?.nombre}</td>
+                          <td className="px-2 py-2">{a.cantidad}</td>
+                          <td className="px-2 py-2">{a.talla}</td>
+                          <td className="px-2 py-2 font-bold">${parseFloat(a.monto).toLocaleString()}</td>
+                          <td className="px-2 py-2">
+                            <span className={`px-2 py-1 rounded text-xs ${a.completado ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                              {a.completado ? 'OK' : 'Pend'}
+                            </span>
+                          </td>
+                          <td className="px-2 py-2">
+                            <button
+                              onClick={() => toggleCompletado(a.id, a.completado)}
+                              className="bg-blue-600 text-white px-2 py-1 rounded mr-1 text-xs"
+                            >
+                              {a.completado ? '↺' : '✓'}
+                            </button>
+                            <button
+                              onClick={() => eliminarAsignacion(a.id)}
+                              className="bg-red-600 text-white px-2 py-1 rounded text-xs"
+                            >
+                              <Trash2 className="w-3 h-3 inline" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
 
         {activeView === 'empleados' && (
@@ -1251,7 +1470,10 @@ function App() {
               <input
                 type="text"
                 value={busquedaPrenda}
-                onChange={(e) => setBusquedaPrenda(e.target.value)}
+                onChange={(e) => {
+                  setBusquedaPrenda(e.target.value);
+                  setPaginaPrendas(1);
+                }}
                 className="w-full px-4 py-2 border rounded-lg"
                 placeholder="🔍 Buscar por ID, referencia o descripción..."
               />
@@ -1303,7 +1525,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {prendasFiltradas.map(p => (
+                  {prendasPaginadas.map(p => (
                     <tr key={p.id} className="border-t">
                       <td className="px-3 py-2">{p.id}</td>
                       <td className="px-3 py-2">{p.referencia}</td>
@@ -1326,6 +1548,12 @@ function App() {
                   ))}
                 </tbody>
               </table>
+              <Paginacion
+                paginaActual={paginaPrendas}
+                totalPaginas={totalPaginasPrendas}
+                setPagina={setPaginaPrendas}
+                totalItems={prendasFiltradas.length}
+              />
             </div>
           </div>
         )}
@@ -1370,7 +1598,10 @@ function App() {
               <input
                 type="text"
                 value={busquedaOperacion}
-                onChange={(e) => setBusquedaOperacion(e.target.value)}
+                onChange={(e) => {
+                  setBusquedaOperacion(e.target.value);
+                  setPaginaOperaciones(1);
+                }}
                 className="w-full px-4 py-2 border rounded-lg"
                 placeholder="🔍 Buscar por ID, nombre de operación o referencia de prenda..."
               />
@@ -1432,7 +1663,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {operacionesFiltradas.map(o => {
+                  {operacionesPaginadas.map(o => {
                     const prenda = prendas.find(p => p.id === o.prenda_id);
                     return (
                       <tr key={o.id} className="border-t">
@@ -1459,6 +1690,12 @@ function App() {
                   })}
                 </tbody>
               </table>
+              <Paginacion
+                paginaActual={paginaOperaciones}
+                totalPaginas={totalPaginasOperaciones}
+                setPagina={setPaginaOperaciones}
+                totalItems={operacionesFiltradas.length}
+              />
             </div>
           </div>
         )}
@@ -1794,8 +2031,6 @@ function App() {
                   </div>
                 </div>
               </div>
-
-//////
               {nominaFiltrada.map(emp => {
                 const asignacionesDetalle = asignaciones.filter(a => {
                   if (!a.completado || a.empleado_id !== emp.id) return false;
