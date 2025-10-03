@@ -20,6 +20,13 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [filtroTaller, setFiltroTaller] = useState('hoy');
   const [cargandoArchivo, setCargandoArchivo] = useState(false);
+  const [busquedaEmpleado, setBusquedaEmpleado] = useState('');
+  const [busquedaPrenda, setBusquedaPrenda] = useState('');
+  const [busquedaOperacion, setBusquedaOperacion] = useState('');
+  const [busquedaAsignacion, setBusquedaAsignacion] = useState('');
+
+
+
   // Estado adicional para Pantalla Taller (no altera flujo existente)
   const [pantallaTaller, setPantallaTaller] = useState(false);
 
@@ -249,8 +256,6 @@ function App() {
     if (error) alert('Error: ' + error.message);
     else cargarDatos();
   };
-  // AGREGAR DESPUÉS DE LA LÍNEA 267 (después de eliminarOperacion)
-
   const descargarPlantillaOperaciones = () => {
     const plantilla = [
       {
@@ -536,6 +541,114 @@ function App() {
     setFiltroFechaFin('');
     setNominaFiltrada(null);
   };
+
+  const exportarNominaExcel = () => {
+    if (!nominaFiltrada || nominaFiltrada.length === 0) {
+      alert('No hay datos de nómina para exportar. Primero calcula la nómina.');
+      return;
+    }
+
+    // Crear hoja resumen
+    const datosResumen = nominaFiltrada.map(emp => ({
+      'ID Empleado': emp.id,
+      'Nombre': emp.nombre,
+      'Operaciones Completadas': emp.operaciones,
+      'Piezas Totales': emp.piezas,
+      'Total a Pagar': emp.monto
+    }));
+
+    // Crear hoja detallada
+    const datosDetalle = [];
+    nominaFiltrada.forEach(emp => {
+      const asignacionesEmp = asignaciones.filter(a => {
+        if (!a.completado || !a.fecha_terminado || a.empleado_id !== emp.id) return false;
+        const fechaTerm = new Date(a.fecha_terminado);
+        const fechaInicio = new Date(filtroFechaInicio);
+        const fechaFin = new Date(filtroFechaFin);
+        return fechaTerm >= fechaInicio && fechaTerm <= fechaFin;
+      });
+
+      asignacionesEmp.forEach(a => {
+        const op = operaciones.find(o => o.id === a.operacion_id);
+        const prenda = prendas.find(p => p.id === a.prenda_id);
+        datosDetalle.push({
+          'ID Empleado': emp.id,
+          'Nombre Empleado': emp.nombre,
+          'Fecha Asignada': new Date(a.fecha).toLocaleDateString(),
+          'Fecha Terminada': a.fecha_terminado ? new Date(a.fecha_terminado).toLocaleDateString() : '-',
+          'Prenda': prenda?.referencia || '-',
+          'Operación': op?.nombre || '-',
+          'Talla': a.talla,
+          'Cantidad': a.cantidad,
+          'Valor Unitario': op?.costo || 0,
+          'Subtotal': a.monto
+        });
+      });
+    });
+
+    // Crear libro de Excel
+    const wb = XLSX.utils.book_new();
+
+    const wsResumen = XLSX.utils.json_to_sheet(datosResumen);
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+    const wsDetalle = XLSX.utils.json_to_sheet(datosDetalle);
+    XLSX.utils.book_append_sheet(wb, wsDetalle, 'Detalle');
+
+    // Agregar hoja de totales
+    const totalGeneral = nominaFiltrada.reduce((sum, emp) => sum + emp.monto, 0);
+    const wsTotales = XLSX.utils.json_to_sheet([
+      { 'Concepto': 'Período', 'Valor': `${new Date(filtroFechaInicio).toLocaleDateString()} - ${new Date(filtroFechaFin).toLocaleDateString()}` },
+      { 'Concepto': 'Total Empleados', 'Valor': nominaFiltrada.length },
+      { 'Concepto': 'Total Operaciones', 'Valor': nominaFiltrada.reduce((sum, e) => sum + e.operaciones, 0) },
+      { 'Concepto': 'Total Piezas', 'Valor': nominaFiltrada.reduce((sum, e) => sum + e.piezas, 0) },
+      { 'Concepto': 'TOTAL A PAGAR', 'Valor': totalGeneral }
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsTotales, 'Totales');
+
+    // Descargar
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const nombreArchivo = `Nomina_${filtroFechaInicio}_${filtroFechaFin}.xlsx`;
+    saveAs(blob, nombreArchivo);
+
+    alert(`Nómina exportada exitosamente: ${nombreArchivo}`);
+  };
+  // FUNCIONES DE FILTRADO
+  const empleadosFiltrados = empleados.filter(e =>
+    e.nombre.toLowerCase().includes(busquedaEmpleado.toLowerCase()) ||
+    e.id.toString().includes(busquedaEmpleado) ||
+    e.telefono.includes(busquedaEmpleado)
+  );
+
+  const prendasFiltradas = prendas.filter(p =>
+    p.referencia.toLowerCase().includes(busquedaPrenda.toLowerCase()) ||
+    (p.descripcion && p.descripcion.toLowerCase().includes(busquedaPrenda.toLowerCase())) ||
+    p.id.toString().includes(busquedaPrenda)
+  );
+
+  const operacionesFiltradas = operaciones.filter(o => {
+    const prenda = prendas.find(p => p.id === o.prenda_id);
+    return (
+      o.nombre.toLowerCase().includes(busquedaOperacion.toLowerCase()) ||
+      o.id.toString().includes(busquedaOperacion) ||
+      (prenda && prenda.referencia.toLowerCase().includes(busquedaOperacion.toLowerCase()))
+    );
+  });
+
+  const asignacionesFiltradas = asignaciones.filter(a => {
+    const emp = empleados.find(e => e.id === a.empleado_id);
+    const op = operaciones.find(o => o.id === a.operacion_id);
+    const prenda = prendas.find(p => p.id === a.prenda_id);
+
+    return (
+      (emp && emp.nombre.toLowerCase().includes(busquedaAsignacion.toLowerCase())) ||
+      (emp && emp.id.toString().includes(busquedaAsignacion)) ||
+      (op && op.nombre.toLowerCase().includes(busquedaAsignacion.toLowerCase())) ||
+      (prenda && prenda.referencia.toLowerCase().includes(busquedaAsignacion.toLowerCase())) ||
+      a.talla.toLowerCase().includes(busquedaAsignacion.toLowerCase())
+    );
+  });
 
   // DATOS PARA GRÁFICOS
   const getDatosGraficos = () => {
@@ -1044,6 +1157,20 @@ function App() {
             <h2 className="text-xl font-bold mb-4">
               {editingEmp ? 'Editar Empleado' : 'Empleados'}
             </h2>
+            <div className="mb-4">
+              <input
+                type="text"
+                value={busquedaEmpleado}
+                onChange={(e) => setBusquedaEmpleado(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg"
+                placeholder="🔍 Buscar por ID, nombre o teléfono..."
+              />
+              {busquedaEmpleado && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Mostrando {empleadosFiltrados.length} de {empleados.length} empleados
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <input
                 value={formEmp.nombre}
@@ -1086,7 +1213,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {empleados.map(e => (
+                  {empleadosFiltrados.map(e => (
                     <tr key={e.id} className="border-t">
                       <td className="px-3 py-2">{e.id}</td>
                       <td className="px-3 py-2">{e.nombre}</td>
@@ -1118,6 +1245,22 @@ function App() {
             <h2 className="text-xl font-bold mb-4">
               {editingPrenda ? 'Editar Prenda' : 'Prendas'}
             </h2>
+
+            {/* CAMPO DE BÚSQUEDA */}
+            <div className="mb-4">
+              <input
+                type="text"
+                value={busquedaPrenda}
+                onChange={(e) => setBusquedaPrenda(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg"
+                placeholder="🔍 Buscar por ID, referencia o descripción..."
+              />
+              {busquedaPrenda && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Mostrando {prendasFiltradas.length} de {prendas.length} prendas
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <input
                 value={formPrenda.referencia}
@@ -1160,7 +1303,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {prendas.map(p => (
+                  {prendasFiltradas.map(p => (
                     <tr key={p.id} className="border-t">
                       <td className="px-3 py-2">{p.id}</td>
                       <td className="px-3 py-2">{p.referencia}</td>
@@ -1201,8 +1344,8 @@ function App() {
                   📥 Descargar Plantilla Excel
                 </button>
                 <label className={`px-4 py-2 rounded text-sm cursor-pointer flex items-center gap-2 ${cargandoArchivo
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
                   }`}>
                   {cargandoArchivo ? '⏳ Cargando...' : '📤 Cargar Excel Masivo'}
                   <input
@@ -1221,6 +1364,21 @@ function App() {
                 <strong>💡 Carga Masiva Inteligente:</strong> Si una prenda no existe en el sistema,
                 se creará automáticamente al cargar las operaciones.
               </p>
+            </div>
+            {/* CAMPO DE BÚSQUEDA */}
+            <div className="mb-4">
+              <input
+                type="text"
+                value={busquedaOperacion}
+                onChange={(e) => setBusquedaOperacion(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg"
+                placeholder="🔍 Buscar por ID, nombre de operación o referencia de prenda..."
+              />
+              {busquedaOperacion && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Mostrando {operacionesFiltradas.length} de {operaciones.length} operaciones
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <input
@@ -1274,7 +1432,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {operaciones.map(o => {
+                  {operacionesFiltradas.map(o => {
                     const prenda = prendas.find(p => p.id === o.prenda_id);
                     return (
                       <tr key={o.id} className="border-t">
@@ -1596,7 +1754,9 @@ function App() {
                   Limpiar Filtros
                 </button>
               </div>
+
             </div>
+
 
             <div className="flex gap-2 flex-wrap mb-4">
               <p className="text-sm font-medium">Rangos rápidos:</p>
@@ -1619,14 +1779,23 @@ function App() {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">Reporte de Nómina Detallado</h3>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Total General del Período</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    ${nominaFiltrada.reduce((sum, r) => sum + r.monto, 0).toLocaleString()}
-                  </p>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={exportarNominaExcel}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
+                  >
+                    📊 Exportar a Excel
+                  </button>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Total General del Período</p>
+                    <p className="text-3xl font-bold text-green-600">
+                      ${nominaFiltrada.reduce((sum, r) => sum + r.monto, 0).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
               </div>
 
+//////
               {nominaFiltrada.map(emp => {
                 const asignacionesDetalle = asignaciones.filter(a => {
                   if (!a.completado || a.empleado_id !== emp.id) return false;
