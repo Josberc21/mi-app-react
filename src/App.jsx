@@ -4,6 +4,7 @@ import { User, Package, Settings, BarChart3, DollarSign, Clock, LogOut, Plus, Tr
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import PantallaTaller from './PantallaTaller';
 
 function App() {
   const [filtroFechaInicio, setFiltroFechaInicio] = useState('');
@@ -28,7 +29,7 @@ function App() {
   const [paginaOperaciones, setPaginaOperaciones] = useState(1);
   const [paginaPrendas, setPaginaPrendas] = useState(1);
   const itemsPorPagina = 20;
-
+  const [modoKiosko, setModoKiosko] = useState(false);
 
 
   // Estado adicional para Pantalla Taller (no altera flujo existente)
@@ -108,6 +109,15 @@ function App() {
       cargarDatos();
     }
   }, [currentUser]);
+  // Activar modo TV desde URL (para QR)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tv') === 'true') {
+      setModoKiosko(true);
+      // Ocultar la barra de navegación del navegador
+      document.documentElement.requestFullscreen?.();
+    }
+  }, []);
 
   // LOGIN
   const handleLogin = () => {
@@ -1029,6 +1039,27 @@ function App() {
       <Icon className="w-4 h-4 inline mr-1" />{label}
     </button>
   );
+// MODO KIOSKO (prioridad máxima - no requiere login)
+  if (modoKiosko) {
+    // Si no hay datos cargados, cargarlos
+    if (empleados.length === 0 && asignaciones.length === 0) {
+      cargarDatos();
+    }
+
+    return (
+      <PantallaTaller 
+        empleados={empleados}
+        asignaciones={asignaciones}
+        operaciones={operaciones}
+        prendas={prendas}
+        onSalir={() => {
+          setModoKiosko(false);
+          // Limpiar parámetro de URL
+          window.history.pushState({}, '', window.location.pathname);
+        }}
+      />
+    );
+  }
 
   // PANTALLA ADMIN
   return (
@@ -1046,6 +1077,12 @@ function App() {
               <NavBtn view="operaciones" icon={Settings} label="Operaciones" />
               <NavBtn view="nomina" icon={DollarSign} label="Nómina" />
               <NavBtn view="taller" icon={BarChart3} label="Pantalla Taller" />
+              <button 
+                onClick={() => setModoKiosko(true)} 
+                className="px-3 py-2 rounded bg-purple-600 text-white text-sm hover:bg-purple-700"
+              >
+                📺 Modo TV
+              </button>
               <button onClick={handleLogout} className="px-3 py-2 rounded bg-red-600 text-white text-sm">
                 <LogOut className="w-4 h-4 inline mr-1" />Salir
               </button>
