@@ -25,7 +25,7 @@ import VistaNomina from './components/nomina/VistaNomina';
 import VistaOperarioPublica from './components/operario/VistaOperarioPublica';
 import VistaDashboard from './components/dashboard/VistaDashboard';
 import PantallaTallerAdmin from './components/taller/PantallaTallerAdmin';
-import PantallaTallerTV from './components/taller/PantallaTallerTv';
+import PantallaTallerTV from './components/taller/PantallaTallerTV';
 import { Monitor } from 'lucide-react'; // Para el icono
 
 function App() {
