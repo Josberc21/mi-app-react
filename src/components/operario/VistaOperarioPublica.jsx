@@ -1,14 +1,19 @@
 // src/components/operario/VistaOperarioPublica.jsx
 import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, AlertCircle, TrendingUp, RefreshCw } from 'lucide-react';
-import { 
-  obtenerEmpleadoPublico, 
+import { useParams } from 'react-router-dom';
+import {
+  obtenerEmpleadoPublico,
   obtenerAsignacionesEmpleadoPublico,
-  obtenerEstadisticasDiaOperario 
+  obtenerEstadisticasDiaOperario
 } from '../../services/operarioPublicoService';
 import Loading from '../common/Loading';
 
-const VistaOperarioPublica = ({ empleadoId }) => {
+const VistaOperarioPublica = () => {
+  // Obtener el ID de la URL
+  const { id } = useParams();
+  const empleadoId = id ? parseInt(id, 10) : null;
+
   const [empleado, setEmpleado] = useState(null);
   const [asignaciones, setAsignaciones] = useState([]);
   const [estadisticas, setEstadisticas] = useState({ totalPiezas: 0, totalMonto: 0, totalOperaciones: 0 });
@@ -16,9 +21,23 @@ const VistaOperarioPublica = ({ empleadoId }) => {
   const [error, setError] = useState(null);
   const [ultimaActualizacion, setUltimaActualizacion] = useState(new Date());
 
+  // Validación del ID
+  if (!empleadoId || isNaN(empleadoId)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg p-8 max-w-md text-center">
+          <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">ID Inválido</h2>
+          <p className="text-gray-600 mb-4">La URL no contiene un ID de empleado válido</p>
+          <p className="text-sm text-gray-500">Ejemplo: /operario/4</p>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     cargarDatos();
-    
+
     // Auto-refresh cada 30 segundos
     const interval = setInterval(() => {
       cargarDatos();
@@ -78,7 +97,7 @@ const VistaOperarioPublica = ({ empleadoId }) => {
     );
   }
 
-  // ✅ Nuevo: Si el empleado no existe o está inactivo
+  // Si el empleado no existe o está inactivo
   if (!empleado && !loading && !error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-600 to-gray-900 flex items-center justify-center p-6">
@@ -101,7 +120,7 @@ const VistaOperarioPublica = ({ empleadoId }) => {
 
   const pendientes = asignaciones.filter(a => !a.completado);
   const hoy = new Date().toISOString().split('T')[0];
-  const completadasHoy = asignaciones.filter(a => 
+  const completadasHoy = asignaciones.filter(a =>
     a.completado && a.fecha_terminado?.startsWith(hoy)
   );
 
@@ -166,8 +185,8 @@ const VistaOperarioPublica = ({ empleadoId }) => {
           ) : (
             <div className="space-y-3">
               {pendientes.map(a => (
-                <div 
-                  key={a.id} 
+                <div
+                  key={a.id}
                   className="bg-white bg-opacity-20 rounded-lg p-4 border-l-4 border-yellow-400"
                 >
                   <div className="flex justify-between items-start mb-2">
@@ -180,7 +199,7 @@ const VistaOperarioPublica = ({ empleadoId }) => {
                       <p className="text-sm opacity-75">piezas</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2 text-sm">
                     <span className="px-3 py-1 bg-white bg-opacity-20 rounded-full">
                       {a.color}
@@ -216,8 +235,8 @@ const VistaOperarioPublica = ({ empleadoId }) => {
           ) : (
             <div className="space-y-2">
               {completadasHoy.slice(0, 5).map(a => (
-                <div 
-                  key={a.id} 
+                <div
+                  key={a.id}
                   className="bg-white bg-opacity-10 rounded-lg p-3 flex justify-between items-center"
                 >
                   <div>
@@ -231,7 +250,7 @@ const VistaOperarioPublica = ({ empleadoId }) => {
                   </div>
                 </div>
               ))}
-              
+
               {completadasHoy.length > 5 && (
                 <p className="text-center text-sm opacity-75 pt-2">
                   + {completadasHoy.length - 5} operaciones más
