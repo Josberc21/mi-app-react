@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingUp, Trophy, Target, Activity, X, Users, Scissors, Package } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const PantallaTallerTV = ({
   empleados = [],
@@ -13,6 +14,7 @@ const PantallaTallerTV = ({
   rotationInterval = 10000,
   onSalir = null,
 }) => {
+  const navigate = useNavigate();
   const vistas = ["ranking", "meta", "tendencia", "operaciones", "empleadoMes", "asignaciones1", "asignaciones2"];
   const [vistaActual, setVistaActual] = useState(0);
   const [fechaActual, setFechaActual] = useState(new Date());
@@ -159,19 +161,21 @@ const PantallaTallerTV = ({
       <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-20 backdrop-blur-sm"></div>
 
       {/* Botón de salir flotante */}
-      {onSalir && (
-        <button
-          onClick={() => {
-            onSalir();
-            if (document.fullscreenElement) {
-              document.exitFullscreen();
-            }
-          }}
-          className="fixed top-2 right-2 md:top-4 md:right-4 z-50 p-2 md:p-3 bg-red-600 rounded-full hover:bg-red-700 shadow-2xl hover:scale-110 transition-all duration-300 flex items-center gap-2"
-        >
-          <X className="w-5 h-5 md:w-6 md:h-6" />
-        </button>
-      )}
+<button
+  onClick={() => {
+    if (onSalir) {
+      onSalir();
+    } else {
+      navigate('/dashboard');
+    }
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  }}
+  className="fixed top-2 right-2 md:top-4 md:right-4 z-50 p-2 md:p-3 bg-red-600 rounded-full hover:bg-red-700 shadow-2xl hover:scale-110 transition-all duration-300 flex items-center gap-2"
+>
+  <X className="w-5 h-5 md:w-6 md:h-6" />
+</button>
 
       <div className="relative z-10 w-full max-w-6xl px-3 md:px-6 py-4 md:py-8 text-center">
         <AnimatePresence mode="wait">
