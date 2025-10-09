@@ -2,12 +2,7 @@ import { create } from 'zustand';
 import { supabase } from './supabaseClient';
 
 export const useDataStore = create((set, get) => ({
-  // =================================================================
-  // === 1. ESTADO (STATE) ===
-  // Aquí vive TODA la información que antes tenías en useState en App.jsx
-  // =================================================================
-
-  // --- Datos de las tablas principales ---
+  // ==================== ESTADO ====================
   empleados: [],
   prendas: [],
   operaciones: [],
@@ -15,13 +10,12 @@ export const useDataStore = create((set, get) => ({
   ordenes: [],
   remisiones: [],
 
-  // --- Estado de la Interfaz de Usuario (UI State) ---
-  nominaFiltrada: null,
-  filtroFechaInicio: '',
-  filtroFechaFin: '',
+  // Estado de conexión
+  isOnline: navigator.onLine,
+  lastSync: null,
+  pendingChanges: [],
 
-  // --- Estados de Carga (Loading States) ---
-  // Un objeto para manejar todos los estados de carga de forma centralizada
+  // Loading states
   loading: {
     empleados: false,
     prendas: false,
@@ -29,107 +23,158 @@ export const useDataStore = create((set, get) => ({
     asignaciones: false,
     ordenes: false,
     remisiones: false,
-    nomina: false,
   },
 
-  // =================================================================
-  // === 2. ACCIONES (ACTIONS) ===
-  // Funciones para buscar y modificar el estado.
-  // =================================================================
-
-  // --- Acciones de Carga (Fetchers) ---
-  // Cada función se encarga de una sola cosa.
+  // ==================== ACCIONES ====================
   
-  // setLoading es una función helper para no repetir código
-  setLoading: (key, value) => set((state) => ({ loading: { ...state.loading, [key]: value } })),
+  setLoading: (key, value) => 
+    set((state) => ({ 
+      loading: { ...state.loading, [key]: value } 
+    })),
 
-  fetchInitialData: async () => {
-    // Esta función puede traer los datos esenciales que se usan en muchas vistas
-    // como empleados y prendas, para tenerlos disponibles rápidamente.
-    const { fetchEmpleados, fetchPrendas } = get();
-    await Promise.all([fetchEmpleados(), fetchPrendas()]);
+  setOnlineStatus: (status) => set({ isOnline: status }),
+
+  // Cargar todos los datos iniciales
+  fetchAllData: async () => {
+    const { 
+      fetchEmpleados, 
+      fetchPrendas, 
+      fetchOperaciones, 
+      fetchAsignaciones, 
+      fetchOrdenes, 
+      fetchRemisiones 
+    } = get();
+
+    await Promise.allSettled([
+      fetchEmpleados(),
+      fetchPrendas(),
+      fetchOperaciones(),
+      fetchAsignaciones(),
+      fetchOrdenes(),
+      fetchRemisiones(),
+    ]);
+
+    set({ lastSync: new Date() });
   },
 
   fetchEmpleados: async () => {
-    if (get().empleados.length > 0) return;
     get().setLoading('empleados', true);
-    const { data } = await supabase.from('empleados').select('*').eq('activo', true).order('id');
-    set({ empleados: data || [] });
-    get().setLoading('empleados', false);
+    try {
+      const { data, error } = await supabase
+        .from('empleados')
+        .select('*')
+        .eq('activo', true)
+        .order('id');
+      
+      if (error) throw error;
+      set({ empleados: data || [] });
+    } catch (error) {
+      console.error('Error fetching empleados:', error);
+    } finally {
+      get().setLoading('empleados', false);
+    }
   },
 
   fetchPrendas: async () => {
-    if (get().prendas.length > 0) return;
     get().setLoading('prendas', true);
-    const { data } = await supabase.from('prendas').select('*').eq('activo', true).order('id');
-    set({ prendas: data || [] });
-    get().setLoading('prendas', false);
+    try {
+      const { data, error } = await supabase
+        .from('prendas')
+        .select('*')
+        .eq('activo', true)
+        .order('id');
+      
+      if (error) throw error;
+      set({ prendas: data || [] });
+    } catch (error) {
+      console.error('Error fetching prendas:', error);
+    } finally {
+      get().setLoading('prendas', false);
+    }
   },
-  
+
   fetchOperaciones: async () => {
-    if (get().operaciones.length > 0) return;
     get().setLoading('operaciones', true);
-    const { data } = await supabase.from('operaciones').select('*').eq('activo', true).order('id');
-    set({ operaciones: data || [] });
-    get().setLoading('operaciones', false);
+    try {
+      const { data, error } = await supabase
+        .from('operaciones')
+        .select('*')
+        .eq('activo', true)
+        .order('id');
+      
+      if (error) throw error;
+      set({ operaciones: data || [] });
+    } catch (error) {
+      console.error('Error fetching operaciones:', error);
+    } finally {
+      get().setLoading('operaciones', false);
+    }
   },
 
   fetchAsignaciones: async () => {
-    // Las asignaciones pueden ser muchas, así que las recargamos cada vez para tener datos frescos.
     get().setLoading('asignaciones', true);
-    const { data } = await supabase.from('asignaciones').select('*').order('created_at', { ascending: false }).limit(1000);
-    set({ asignaciones: data || [] });
-    get().setLoading('asignaciones', false);
-  },
-
-  // ... Aquí irían `fetchOrdenes` y `fetchRemisiones` siguiendo el mismo patrón.
-
-  // --- Acciones de Nómina ---
-  
-  setFiltroFechas: ({ inicio, fin }) => {
-    set({ filtroFechaInicio: inicio, filtroFechaFin: fin });
-  },
-
-  limpiarFiltrosNomina: () => {
-    set({ filtroFechaInicio: '', filtroFechaFin: '', nominaFiltrada: null });
-  },
-
-  generarReporteNomina: () => {
-    // ¡Aquí está la magia! La lógica de negocio vive en el store.
-    // Puede acceder a otros datos del store (empleados, asignaciones) usando get().
-    get().setLoading('nomina', true);
-    const { empleados, asignaciones, filtroFechaInicio, filtroFechaFin } = get();
-
-    if (!filtroFechaInicio || !filtroFechaFin) {
-      // Aquí podrías usar tu sistema de toast para advertir al usuario
-      console.warn("Seleccione un rango de fechas");
-      get().setLoading('nomina', false);
-      return;
-    }
-
-    const fechaInicio = new Date(filtroFechaInicio);
-    const fechaFin = new Date(filtroFechaFin);
-
-    const reporte = empleados.map(emp => {
-      const asignacionesEmp = asignaciones.filter(a => {
-        if (!a.completado || !a.fecha_terminado || a.empleado_id !== emp.id) return false;
-        const fechaTerm = new Date(a.fecha_terminado);
-        return fechaTerm >= fechaInicio && fechaTerm <= fechaFin;
-      });
-
-      const totalMonto = asignacionesEmp.reduce((sum, a) => sum + parseFloat(a.monto), 0);
+    try {
+      const { data, error } = await supabase
+        .from('asignaciones')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1000);
       
-      return {
-        id: emp.id,
-        nombre: emp.nombre,
-        operaciones: asignacionesEmp.length,
-        piezas: asignacionesEmp.reduce((sum, a) => sum + a.cantidad, 0),
-        monto: totalMonto
-      };
-    }).filter(r => r.monto > 0);
-
-    set({ nominaFiltrada: reporte });
-    get().setLoading('nomina', false);
+      if (error) throw error;
+      set({ asignaciones: data || [] });
+    } catch (error) {
+      console.error('Error fetching asignaciones:', error);
+    } finally {
+      get().setLoading('asignaciones', false);
+    }
   },
 
+  fetchOrdenes: async () => {
+    get().setLoading('ordenes', true);
+    try {
+      const { data, error } = await supabase
+        .from('ordenes_produccion')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      
+      if (error) throw error;
+      set({ ordenes: data || [] });
+    } catch (error) {
+      console.error('Error fetching ordenes:', error);
+    } finally {
+      get().setLoading('ordenes', false);
+    }
+  },
+
+  fetchRemisiones: async () => {
+    get().setLoading('remisiones', true);
+    try {
+      const { data, error } = await supabase
+        .from('remisiones')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      
+      if (error) throw error;
+      set({ remisiones: data || [] });
+    } catch (error) {
+      console.error('Error fetching remisiones:', error);
+    } finally {
+      get().setLoading('remisiones', false);
+    }
+  },
+
+  // Sincronizar cambios pendientes
+  syncPendingChanges: async () => {
+    const { pendingChanges, isOnline } = get();
+    
+    if (!isOnline || pendingChanges.length === 0) return;
+
+    // Aquí implementarás la lógica de sincronización
+    console.log('Sincronizando cambios pendientes...', pendingChanges);
+    
+    // Por ahora solo limpiamos
+    set({ pendingChanges: [] });
+  },
 }));

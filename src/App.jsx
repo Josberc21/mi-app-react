@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link, Outlet } from 'react-router-dom';
 import { User, Package, Settings, BarChart3, DollarSign, LogOut, Plus, Monitor } from 'lucide-react';
 import { iniciarSesion, cerrarSesion, obtenerUsuarioActual } from './services/authService';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
+import OfflineBanner from './components/common/OfflineBanner';
 
 // Hooks personalizados
 import { useToast } from './hooks/useToast';
@@ -110,8 +112,9 @@ function AppContent() {
   const { toast, cerrarToast, mostrarExito, mostrarError, mostrarAdvertencia, mostrarInfo } = useToast();
   const { empleados, prendas, operaciones, asignaciones, ordenes, remisiones, loading, error, recargar: recargarDatos } = useDatos(currentUser);
   const { calcularNominaEmpleado, calcularNominaTotal, calcularProgresoOrden, estadisticasDashboard } = useCalculos(asignaciones, empleados, operaciones, ordenes, prendas);
+  const { isOnline } = useOnlineStatus();
 
-  // ⭐ AGREGA ESTO: Verificar sesión al cargar la app
+  // Verificar sesión al cargar la app
   useEffect(() => {
     const verificarSesionInicial = async () => {
       const usuario = await obtenerUsuarioActual();
@@ -146,6 +149,7 @@ function AppContent() {
 
   return (
     <>
+      <OfflineBanner isOnline={isOnline} />
       <Toast toast={toast} onClose={cerrarToast} />
       {loading && <Loading />}
 
