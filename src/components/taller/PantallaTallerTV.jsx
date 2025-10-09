@@ -127,7 +127,7 @@ const PantallaTallerTV = ({
       const emp = empleados.find(e => Number(e.id) === Number(a.empleado_id));
       const op = operaciones.find(o => Number(o.id) === Number(a.operacion_id));
       const prenda = op ? prendas.find(p => Number(p.id) === Number(op.prenda_id)) : null;
-      
+
       return {
         id: a.id,
         empleado: emp?.nombre || 'Sin asignar',
@@ -161,21 +161,21 @@ const PantallaTallerTV = ({
       <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-20 backdrop-blur-sm"></div>
 
       {/* Botón de salir flotante */}
-<button
-  onClick={() => {
-    if (onSalir) {
-      onSalir();
-    } else {
-      navigate('/dashboard');
-    }
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    }
-  }}
-  className="fixed top-2 right-2 md:top-4 md:right-4 z-50 p-2 md:p-3 bg-red-600 rounded-full hover:bg-red-700 shadow-2xl hover:scale-110 transition-all duration-300 flex items-center gap-2"
->
-  <X className="w-5 h-5 md:w-6 md:h-6" />
-</button>
+      <button
+        onClick={() => {
+          if (onSalir) {
+            onSalir();
+          } else {
+            navigate('/dashboard');
+          }
+          if (document.fullscreenElement) {
+            document.exitFullscreen();
+          }
+        }}
+        className="fixed top-2 right-2 md:top-4 md:right-4 z-50 p-2 md:p-3 bg-red-600 rounded-full hover:bg-red-700 shadow-2xl hover:scale-110 transition-all duration-300 flex items-center gap-2"
+      >
+        <X className="w-5 h-5 md:w-6 md:h-6" />
+      </button>
 
       <div className="relative z-10 w-full max-w-6xl px-3 md:px-6 py-4 md:py-8 text-center">
         <AnimatePresence mode="wait">
@@ -232,7 +232,7 @@ const PantallaTallerTV = ({
               </h1>
               <div className="text-center">
                 <div className="flex justify-center items-baseline gap-2 md:gap-4 mb-4 md:mb-6">
-                  <motion.p 
+                  <motion.p
                     className="text-4xl md:text-7xl font-black text-green-300"
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ repeat: Infinity, duration: 2 }}
@@ -255,7 +255,7 @@ const PantallaTallerTV = ({
                   </motion.div>
                 </div>
                 {progresoMeta >= 100 ? (
-                  <motion.p 
+                  <motion.p
                     className="text-3xl md:text-5xl mt-4 md:mt-8 font-bold"
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ repeat: Infinity, duration: 1 }}
@@ -363,7 +363,7 @@ const PantallaTallerTV = ({
                   >
                     🏆
                   </motion.div>
-                  <motion.h2 
+                  <motion.h2
                     className="text-3xl md:text-5xl font-black text-yellow-300 mb-2 md:mb-4"
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ repeat: Infinity, duration: 2 }}

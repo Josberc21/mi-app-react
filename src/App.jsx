@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link, Outlet } from 'react-router-dom';
 import { User, Package, Settings, BarChart3, DollarSign, LogOut, Plus, Monitor } from 'lucide-react';
+import { iniciarSesion, cerrarSesion, obtenerUsuarioActual } from './services/authService';
 
 // Hooks personalizados
 import { useToast } from './hooks/useToast';
@@ -10,9 +11,6 @@ import { useCalculos } from './hooks/useCalculos';
 // Componentes comunes
 import Toast from './components/common/Toast';
 import Loading from './components/common/Loading';
-
-// Constantes
-import { USUARIOS } from './constants';
 
 // Vistas/Componentes
 import VistaEmpleados from './components/empleados/VistaEmpleados';
@@ -49,11 +47,6 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
           <input type="text" value={loginId} onChange={(e) => setLoginId(e.target.value)} className="w-full px-4 py-2 border rounded-lg" placeholder="Usuario" />
           <input type="password" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin(loginId, loginPass)} className="w-full px-4 py-2 border rounded-lg" placeholder="Contraseña" />
           <button onClick={() => handleLogin(loginId, loginPass)} className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700">Iniciar Sesión</button>
-        </div>
-        <div className="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded">
-          <p className="font-semibold mb-2">Usuarios de prueba:</p>
-          <p>Admin: admin / admin123</p>
-          <p>Básico: operario / operario123</p>
         </div>
       </div>
     </div>
@@ -118,19 +111,34 @@ function AppContent() {
   const { empleados, prendas, operaciones, asignaciones, ordenes, remisiones, loading, error, recargar: recargarDatos } = useDatos(currentUser);
   const { calcularNominaEmpleado, calcularNominaTotal, calcularProgresoOrden, estadisticasDashboard } = useCalculos(asignaciones, empleados, operaciones, ordenes, prendas);
 
-  // Login/Logout
-  const handleLogin = (username, password) => {
-    const user = USUARIOS.find(u => u.username === username && u.password === password);
-    if (user) {
-      setCurrentUser(user);
-      mostrarExito(`Bienvenido ${user.username}`);
-      navigate(user.role === 'admin' ? '/dashboard' : '/operario-panel');
+  // ⭐ AGREGA ESTO: Verificar sesión al cargar la app
+  useEffect(() => {
+    const verificarSesionInicial = async () => {
+      const usuario = await obtenerUsuarioActual();
+      if (usuario) {
+        setCurrentUser(usuario);
+      }
+    };
+    
+    verificarSesionInicial();
+  }, []);
+
+  // Login
+  const handleLogin = async (username, password) => {
+    const result = await iniciarSesion(username, password);
+    
+    if (result.success) {
+      setCurrentUser(result.user);
+      mostrarExito(`Bienvenido ${result.user.nombre || result.user.username}`);
+      navigate(result.user.role === 'admin' ? '/dashboard' : '/operario-panel');
     } else {
       mostrarError('Credenciales incorrectas');
     }
   };
 
-  const handleLogout = () => {
+  // Logout
+  const handleLogout = async () => {
+    await cerrarSesion();
     setCurrentUser(null);
     mostrarInfo('Sesión cerrada');
     navigate('/login');

@@ -17,10 +17,6 @@ export const COLORES_DISPONIBLES = [
   'Café'
 ];
 
-export const USUARIOS = [
-  { username: 'admin', password: 'admin123', role: 'admin' },
-  { username: 'operario', password: 'operario123', role: 'basico' }
-];
 
 export const ITEMS_POR_PAGINA = 20;
 
