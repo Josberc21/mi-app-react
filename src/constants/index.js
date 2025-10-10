@@ -10,6 +10,7 @@ export const COLORES_DISPONIBLES = [
   'Rojo',
   'Verde',
   'Amarillo',
+  'Marfil',
   'Gris',
   'Beige',
   'Rosado',

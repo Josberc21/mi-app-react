@@ -126,6 +126,20 @@ function AppContent() {
     verificarSesionInicial();
   }, []);
 
+  // 🎯 CALCULAR META DINÁMICA DEL DÍA (para Pantalla TV)
+const calcularMetaDiaria = () => {
+  const hoy = new Date();
+  const hoyStr = hoy.toISOString().split('T')[0];
+
+  const asignacionesHoy = asignaciones.filter(a => {
+    if (!a.fecha) return false;
+    const fechaAsig = a.fecha.toString().split('T')[0].split(' ')[0];
+    return fechaAsig === hoyStr;
+  });
+
+  return asignacionesHoy.reduce((sum, a) => sum + (a.cantidad || 0), 0);
+};
+
   // Login
   const handleLogin = async (username, password) => {
     const result = await iniciarSesion(username, password);
@@ -190,7 +204,7 @@ function AppContent() {
         </Route>
 
         {/* --- PANTALLA TV PÚBLICA --- */}
-        <Route path="/taller-tv" element={<PantallaTallerTV {...{ empleados, asignaciones, operaciones, prendas }} />} />
+       <Route path="/taller-tv" element={<PantallaTallerTV {...{ empleados, asignaciones, operaciones, prendas, metaDiaria: calcularMetaDiaria() }} />} />
 
         {/* --- RUTA COMODÍN --- */}
         <Route path="*" element={<Navigate to="/taller-tv" replace />} />

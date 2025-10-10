@@ -1,12 +1,14 @@
 // src/components/operaciones/TablaOperaciones.jsx
 import React from 'react';
-import { Edit, Trash2, Package } from 'lucide-react';
+import { Edit, Trash2, Package, ArrowUpDown } from 'lucide-react';
 
-const TablaOperaciones = ({ 
-  operaciones, 
+const TablaOperaciones = ({
+  operaciones,
   prendas = [],
-  onEditar, 
-  onEliminar 
+  onEditar,
+  onEliminar,
+  ordenCosto,
+  onCambiarOrdenCosto
 }) => {
   if (operaciones.length === 0) {
     return (
@@ -29,7 +31,22 @@ const TablaOperaciones = ({
           <tr>
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Operación</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Costo</th>
+            <th
+              className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 select-none"
+              onClick={onCambiarOrdenCosto}
+              title="Clic para ordenar"
+            >
+              <div className="flex items-center gap-2">
+                Costo
+                <ArrowUpDown className="w-4 h-4" />
+                {ordenCosto && (
+                  <span className="text-blue-600 font-bold">
+                    {ordenCosto === 'menor' ? '↑' : ordenCosto === 'mayor' ? '↓' : ''}
+                  </span>
+                )}
+              </div>
+            </th>
+
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prenda</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Acciones</th>
           </tr>
@@ -37,7 +54,7 @@ const TablaOperaciones = ({
         <tbody className="divide-y divide-gray-200">
           {operaciones.map(operacion => {
             const prenda = obtenerPrenda(operacion.prenda_id);
-            
+
             return (
               <tr key={operacion.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-sm font-medium text-gray-900">

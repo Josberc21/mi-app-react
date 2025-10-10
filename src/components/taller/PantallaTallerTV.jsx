@@ -9,7 +9,7 @@ const PantallaTallerTV = ({
   asignaciones = [],
   operaciones = [],
   prendas = [],
-  metaDiaria = 1200,
+  metaDiaria = 0,
   labelPreference = "prendas",
   rotationInterval = 10000,
   onSalir = null,
@@ -156,6 +156,37 @@ const PantallaTallerTV = ({
   const formatearNumero = (num) =>
     num?.toLocaleString("es-CO", { minimumFractionDigits: 0 }) ?? "0";
 
+  // 🎯 ASIGNACIONES AGRUPADAS POR OPERARIO (movido fuera del JSX)
+  const asignacionesPorOperario = empleados.map(emp => {
+    const asigsPendientes = asignaciones
+      .filter(a => !a.completado && Number(a.empleado_id) === Number(emp.id))
+      .map(a => {
+        const op = operaciones.find(o => Number(o.id) === Number(a.operacion_id));
+        const prenda = op ? prendas.find(p => Number(p.id) === Number(op.prenda_id)) : null;
+        return {
+          id: a.id,
+          operacion: op?.nombre || 'Sin operación',
+          referencia: prenda?.referencia || 'N/A',
+          color: a.color || 'N/A',
+          talla: a.talla || 'N/A',
+          cantidad: a.cantidad || 0
+        };
+      });
+
+    return {
+      empleado_id: emp.id,
+      empleado_nombre: emp.nombre,
+      asignaciones: asigsPendientes,
+      totalPendiente: asigsPendientes.reduce((sum, a) => sum + a.cantidad, 0)
+    };
+  }).filter(e => e.asignaciones.length > 0)
+    .sort((a, b) => b.totalPendiente - a.totalPendiente);
+
+  // Dividir operarios en 2 pantallas
+  const mitadOperarios = Math.ceil(asignacionesPorOperario.length / 2);
+  const operariosPantalla1 = asignacionesPorOperario.slice(0, mitadOperarios);
+  const operariosPantalla2 = asignacionesPorOperario.slice(mitadOperarios);
+
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-800 text-white flex flex-col items-center justify-center overflow-hidden relative">
       <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-20 backdrop-blur-sm"></div>
@@ -182,10 +213,9 @@ const PantallaTallerTV = ({
           {/* VISTA RANKING */}
           {vista === "ranking" && (
             <motion.div key="ranking" {...variantes}>
-              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8 flex items-center justify-center gap-2 md:gap-3">
-                <Trophy className="w-6 h-6 md:w-10 md:h-10 text-yellow-400" />
-                🏆 TOP 5 DEL DÍA
-              </h1>
+              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8">
+  🏆 TOP 5 DEL DÍA
+</h1>
               <div className="space-y-3 md:space-y-4">
                 {rankingHoy.length === 0 ? (
                   <p className="text-lg md:text-2xl opacity-70">No hay producción completada hoy</p>
@@ -226,8 +256,7 @@ const PantallaTallerTV = ({
           {/* VISTA META */}
           {vista === "meta" && (
             <motion.div key="meta" {...variantes}>
-              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8 flex items-center justify-center gap-2 md:gap-3">
-                <Target className="w-6 h-6 md:w-10 md:h-10 text-pink-400" />
+              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8">
                 🎯 META DIARIA
               </h1>
               <div className="text-center">
@@ -274,8 +303,7 @@ const PantallaTallerTV = ({
           {/* VISTA TENDENCIA */}
           {vista === "tendencia" && (
             <motion.div key="tendencia" {...variantes}>
-              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8 flex items-center justify-center gap-2 md:gap-3">
-                <Activity className="w-6 h-6 md:w-10 md:h-10 text-blue-300" />
+              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8">                
                 📊 ÚLTIMOS 7 DÍAS
               </h1>
               <div className="flex justify-center items-end h-60 md:h-80 gap-2 md:gap-4">
@@ -312,8 +340,7 @@ const PantallaTallerTV = ({
           {/* VISTA OPERACIONES */}
           {vista === "operaciones" && (
             <motion.div key="operaciones" {...variantes}>
-              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8 flex items-center justify-center gap-2 md:gap-3">
-                <Scissors className="w-6 h-6 md:w-10 md:h-10 text-green-400" />
+              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8"> 
                 ✂️ TOP OPERACIONES HOY
               </h1>
               {topOperaciones.length === 0 ? (
@@ -347,8 +374,7 @@ const PantallaTallerTV = ({
           {/* VISTA EMPLEADO DEL MES */}
           {vista === "empleadoMes" && (
             <motion.div key="empleadoMes" {...variantes}>
-              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8 flex items-center justify-center gap-2 md:gap-3">
-                <Trophy className="w-6 h-6 md:w-10 md:h-10 text-yellow-400" />
+              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8"> 
                 👑 EMPLEADO DEL MES
               </h1>
               {!empleadoMes ? (
@@ -396,61 +422,73 @@ const PantallaTallerTV = ({
             </motion.div>
           )}
 
-          {/* VISTA ASIGNACIONES PANTALLA 1 */}
+          {/* VISTA ASIGNACIONES PANTALLA 1 - AGRUPADAS POR OPERARIO */}
           {vista === "asignaciones1" && (
             <motion.div key="asignaciones1" {...variantes}>
-              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8 flex items-center justify-center gap-2 md:gap-3">
-                <Package className="w-6 h-6 md:w-10 md:h-10 text-cyan-400" />
+              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8">
                 📋 ASIGNACIONES ACTIVAS (1/2)
               </h1>
-              {asignacionesPantalla1.length === 0 ? (
+              {operariosPantalla1.length === 0 ? (
                 <p className="text-xl md:text-3xl opacity-70">No hay asignaciones pendientes</p>
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:gap-6">
-                  {asignacionesPantalla1.map((asig, i) => (
+                  {operariosPantalla1.map((operario, idx) => (
                     <motion.div
-                      key={asig.id}
-                      className="bg-gradient-to-r from-cyan-600 to-blue-700 rounded-2xl md:rounded-3xl p-4 md:p-8 text-left shadow-2xl border-4 border-white border-opacity-20"
+                      key={operario.empleado_id}
+                      className="bg-gradient-to-r from-cyan-600 to-blue-700 rounded-2xl md:rounded-3xl p-4 md:p-6 text-left shadow-2xl border-4 border-white border-opacity-20"
                       initial={{ opacity: 0, x: -50 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
+                      transition={{ delay: idx * 0.1 }}
                     >
-                      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                        <div className="flex-1 w-full">
-                          <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
-                            <Users className="w-5 h-5 md:w-8 md:h-8 text-yellow-300" />
-                            <span className="text-2xl md:text-4xl font-black">{asig.empleado}</span>
-                            <span className="text-base md:text-2xl opacity-75">ID: {asig.empleado_id}</span>
-                          </div>
-                          <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
-                            <Scissors className="w-5 h-5 md:w-7 md:h-7 text-green-300" />
-                            <span className="text-xl md:text-3xl font-bold text-green-200">{asig.operacion}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 md:gap-4 mt-2 md:mt-4">
-                            <div className="bg-white bg-opacity-10 rounded-lg md:rounded-xl p-2 md:p-4">
-                              <p className="text-xs md:text-sm opacity-75 mb-1">Referencia</p>
-                              <p className="text-base md:text-2xl font-bold">{asig.referencia}</p>
-                            </div>
-                            <div className="bg-white bg-opacity-10 rounded-lg md:rounded-xl p-2 md:p-4">
-                              <p className="text-xs md:text-sm opacity-75 mb-1">Color</p>
-                              <p className="text-base md:text-2xl font-bold">{asig.color}</p>
-                            </div>
-                            <div className="bg-white bg-opacity-10 rounded-lg md:rounded-xl p-2 md:p-4">
-                              <p className="text-xs md:text-sm opacity-75 mb-1">Talla</p>
-                              <p className="text-base md:text-2xl font-bold">{asig.talla}</p>
-                            </div>
-                          </div>
+                      {/* Header: Nombre del operario */}
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-white border-opacity-30">
+                        <div className="flex items-center gap-2 md:gap-3">
+                          <Users className="w-6 h-6 md:w-8 md:h-8 text-yellow-300" />
+                          <span className="text-2xl md:text-4xl font-black">{operario.empleado_nombre}</span>
                         </div>
-                        <div className="text-right w-full md:w-auto md:ml-6">
-                          <motion.div
-                            className="bg-yellow-400 text-gray-900 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg"
-                            animate={{ scale: [1, 1.05, 1] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                          >
-                            <p className="text-4xl md:text-6xl font-black">{asig.cantidad}</p>
-                            <p className="text-sm md:text-lg font-bold mt-1">PRENDAS</p>
-                          </motion.div>
+                        <div className="bg-yellow-400 text-gray-900 rounded-xl px-3 md:px-4 py-1 md:py-2">
+                          <p className="text-xl md:text-3xl font-black">{operario.totalPendiente}</p>
+                          <p className="text-xs md:text-sm font-bold">TOTAL</p>
                         </div>
+                      </div>
+
+                      {/* Lista de asignaciones */}
+                      <div className="space-y-3">
+                        {operario.asignaciones.map((asig) => (
+                          <div key={asig.id} className="bg-white bg-opacity-10 rounded-xl p-3 md:p-4 backdrop-blur-sm">
+                            {/* OPERACIÓN (PRINCIPAL - MÁS GRANDE) */}
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Scissors className="w-5 h-5 md:w-6 md:h-6 text-green-300" />
+                                  <p className="text-xl md:text-3xl font-black text-green-200 leading-tight">
+                                    {asig.operacion}
+                                  </p>
+                                </div>
+                                {/* PRENDA (Secundaria - más pequeña) */}
+                                <p className="text-xs md:text-sm opacity-70 ml-7 md:ml-8">
+                                  {asig.referencia}
+                                </p>
+                              </div>
+                              {/* CANTIDAD (Destacada a la derecha) */}
+                              <div className="bg-orange-400 text-gray-900 rounded-lg px-3 md:px-4 py-2 md:py-3 ml-3">
+                                <p className="text-2xl md:text-4xl font-black leading-none">{asig.cantidad}</p>
+                              </div>
+                            </div>
+
+                            {/* TALLA Y COLOR (Destacados) */}
+                            <div className="flex gap-2 mt-2">
+                              <div className="bg-purple-500 bg-opacity-40 rounded-lg px-3 py-1 flex-1 text-center">
+                                <p className="text-xs opacity-75">Talla</p>
+                                <p className="text-lg md:text-2xl font-bold">{asig.talla}</p>
+                              </div>
+                              <div className="bg-pink-500 bg-opacity-40 rounded-lg px-3 py-1 flex-1 text-center">
+                                <p className="text-xs opacity-75">Color</p>
+                                <p className="text-lg md:text-2xl font-bold">{asig.color}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </motion.div>
                   ))}
@@ -459,61 +497,73 @@ const PantallaTallerTV = ({
             </motion.div>
           )}
 
-          {/* VISTA ASIGNACIONES PANTALLA 2 */}
+          {/* VISTA ASIGNACIONES PANTALLA 2 - AGRUPADAS POR OPERARIO */}
           {vista === "asignaciones2" && (
             <motion.div key="asignaciones2" {...variantes}>
-              <h1 className="text-5xl font-bold mb-8 flex items-center justify-center gap-3">
-                <Package className="w-10 h-10 text-cyan-400" />
+              <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8">
                 📋 ASIGNACIONES ACTIVAS (2/2)
               </h1>
-              {asignacionesPantalla2.length === 0 ? (
-                <p className="text-3xl opacity-70">No hay más asignaciones pendientes</p>
+              {operariosPantalla2.length === 0 ? (
+                <p className="text-xl md:text-3xl opacity-70">No hay más asignaciones pendientes</p>
               ) : (
-                <div className="grid grid-cols-1 gap-6">
-                  {asignacionesPantalla2.map((asig, i) => (
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
+                  {operariosPantalla2.map((operario, idx) => (
                     <motion.div
-                      key={asig.id}
-                      className="bg-gradient-to-r from-purple-600 to-pink-700 rounded-3xl p-8 text-left shadow-2xl border-4 border-white border-opacity-20"
+                      key={operario.empleado_id}
+                      className="bg-gradient-to-r from-purple-600 to-pink-700 rounded-2xl md:rounded-3xl p-4 md:p-6 text-left shadow-2xl border-4 border-white border-opacity-20"
                       initial={{ opacity: 0, x: -50 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
+                      transition={{ delay: idx * 0.1 }}
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-4">
-                            <Users className="w-8 h-8 text-yellow-300" />
-                            <span className="text-4xl font-black">{asig.empleado}</span>
-                            <span className="text-2xl opacity-75">ID: {asig.empleado_id}</span>
-                          </div>
-                          <div className="flex items-center gap-3 mb-4">
-                            <Scissors className="w-7 h-7 text-green-300" />
-                            <span className="text-3xl font-bold text-green-200">{asig.operacion}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4 mt-4">
-                            <div className="bg-white bg-opacity-10 rounded-xl p-4">
-                              <p className="text-sm opacity-75 mb-1">Referencia</p>
-                              <p className="text-2xl font-bold">{asig.referencia}</p>
-                            </div>
-                            <div className="bg-white bg-opacity-10 rounded-xl p-4">
-                              <p className="text-sm opacity-75 mb-1">Color</p>
-                              <p className="text-2xl font-bold">{asig.color}</p>
-                            </div>
-                            <div className="bg-white bg-opacity-10 rounded-xl p-4">
-                              <p className="text-sm opacity-75 mb-1">Talla</p>
-                              <p className="text-2xl font-bold">{asig.talla}</p>
-                            </div>
-                          </div>
+                      {/* Header: Nombre del operario */}
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-white border-opacity-30">
+                        <div className="flex items-center gap-2 md:gap-3">
+                          <Users className="w-6 h-6 md:w-8 md:h-8 text-yellow-300" />
+                          <span className="text-2xl md:text-4xl font-black">{operario.empleado_nombre}</span>
                         </div>
-                        <div className="text-right ml-6">
-                          <motion.div
-                            className="bg-yellow-400 text-gray-900 rounded-2xl p-6 shadow-lg"
-                            animate={{ scale: [1, 1.05, 1] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                          >
-                            <p className="text-6xl font-black">{asig.cantidad}</p>
-                            <p className="text-lg font-bold mt-1">PIEZAS</p>
-                          </motion.div>
+                        <div className="bg-yellow-400 text-gray-900 rounded-xl px-3 md:px-4 py-1 md:py-2">
+                          <p className="text-xl md:text-3xl font-black">{operario.totalPendiente}</p>
+                          <p className="text-xs md:text-sm font-bold">TOTAL</p>
                         </div>
+                      </div>
+
+                      {/* Lista de asignaciones */}
+                      <div className="space-y-3">
+                        {operario.asignaciones.map((asig) => (
+                          <div key={asig.id} className="bg-white bg-opacity-10 rounded-xl p-3 md:p-4 backdrop-blur-sm">
+                            {/* OPERACIÓN (PRINCIPAL - MÁS GRANDE) */}
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Scissors className="w-5 h-5 md:w-6 md:h-6 text-green-300" />
+                                  <p className="text-xl md:text-3xl font-black text-green-200 leading-tight">
+                                    {asig.operacion}
+                                  </p>
+                                </div>
+                                {/* PRENDA (Secundaria - más pequeña) */}
+                                <p className="text-xs md:text-sm opacity-70 ml-7 md:ml-8">
+                                  {asig.referencia}
+                                </p>
+                              </div>
+                              {/* CANTIDAD (Destacada a la derecha) */}
+                              <div className="bg-orange-400 text-gray-900 rounded-lg px-3 md:px-4 py-2 md:py-3 ml-3">
+                                <p className="text-2xl md:text-4xl font-black leading-none">{asig.cantidad}</p>
+                              </div>
+                            </div>
+
+                            {/* TALLA Y COLOR (Destacados) */}
+                            <div className="flex gap-2 mt-2">
+                              <div className="bg-purple-500 bg-opacity-40 rounded-lg px-3 py-1 flex-1 text-center">
+                                <p className="text-xs opacity-75">Talla</p>
+                                <p className="text-lg md:text-2xl font-bold">{asig.talla}</p>
+                              </div>
+                              <div className="bg-pink-500 bg-opacity-40 rounded-lg px-3 py-1 flex-1 text-center">
+                                <p className="text-xs opacity-75">Color</p>
+                                <p className="text-lg md:text-2xl font-bold">{asig.color}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </motion.div>
                   ))}
@@ -524,7 +574,7 @@ const PantallaTallerTV = ({
         </AnimatePresence>
 
         <p className="mt-10 text-sm opacity-70">
-          Última actualización:{" "}
+          Última actualización: {" "}
           {fechaActual.toLocaleTimeString("es-CO", {
             hour: "2-digit",
             minute: "2-digit",

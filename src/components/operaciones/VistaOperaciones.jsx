@@ -1,5 +1,5 @@
 // src/components/operaciones/VistaOperaciones.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Settings, Upload } from 'lucide-react';
 import CampoBusqueda from '../common/CampoBusqueda';
 import Paginacion from '../common/Paginacion';
@@ -12,12 +12,12 @@ import { usePaginacion } from '../../hooks/usePaginacion';
 import { useModal } from '../../hooks/useModal';
 import { crearOperacion, actualizarOperacion, eliminarOperacion } from '../../services/operacionesService';
 
-const VistaOperaciones = ({ 
+const VistaOperaciones = ({
   operaciones,
   prendas = [],
-  recargarDatos, 
-  mostrarExito, 
-  mostrarError, 
+  recargarDatos,
+  mostrarExito,
+  mostrarError,
   mostrarAdvertencia,
   mostrarInfo
 }) => {
@@ -25,6 +25,7 @@ const VistaOperaciones = ({
   const [editando, setEditando] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [mostrarCargaMasiva, setMostrarCargaMasiva] = useState(false);
+  const [ordenCosto, setOrdenCosto] = useState(null); // null, 'menor', 'mayor'
 
   // Hooks personalizados - Búsqueda en operaciones Y prendas
   const { busqueda, setBusqueda, datosFiltrados } = useBusqueda(
@@ -39,6 +40,21 @@ const VistaOperaciones = ({
       );
     }
   );
+  // Ordenamiento por costo
+  const operacionesOrdenadas = useMemo(() => {
+    if (!ordenCosto) return datosFiltrados;
+
+    return [...datosFiltrados].sort((a, b) => {
+      const costoA = parseFloat(a.costo);
+      const costoB = parseFloat(b.costo);
+
+      if (ordenCosto === 'menor') {
+        return costoA - costoB; // Menor a mayor
+      } else {
+        return costoB - costoA; // Mayor a menor
+      }
+    });
+  }, [datosFiltrados, ordenCosto]);
 
   const {
     paginaActual,
@@ -48,9 +64,20 @@ const VistaOperaciones = ({
     paginaAnterior,
     paginaSiguiente,
     ultimaPagina
-  } = usePaginacion(datosFiltrados);
+  } = usePaginacion(operacionesOrdenadas);
 
   const modalEliminar = useModal();
+
+  // Función para cambiar orden de costo
+  const handleCambiarOrdenCosto = () => {
+    if (ordenCosto === null) {
+      setOrdenCosto('menor');
+    } else if (ordenCosto === 'menor') {
+      setOrdenCosto('mayor');
+    } else {
+      setOrdenCosto(null);
+    }
+  };
 
   // Manejadores de formulario
   const handleChange = (e) => {
@@ -145,11 +172,10 @@ const VistaOperaciones = ({
           </h3>
           <button
             onClick={() => setMostrarCargaMasiva(!mostrarCargaMasiva)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${
-              mostrarCargaMasiva
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${mostrarCargaMasiva
                 ? 'bg-gray-200 text-gray-700'
                 : 'bg-purple-600 text-white hover:bg-purple-700'
-            }`}
+              }`}
           >
             <Upload className="w-5 h-5" />
             {mostrarCargaMasiva ? 'Ocultar Carga Masiva' : 'Carga Masiva Excel'}
@@ -180,7 +206,19 @@ const VistaOperaciones = ({
       {/* Tabla */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-xl font-bold mb-4">Catálogo de Operaciones</h3>
-        
+        {ordenCosto && (
+          <div className="mb-3 p-2 bg-blue-50 rounded text-sm text-blue-800">
+            <strong>Ordenando por:</strong> {
+              ordenCosto === 'menor' ? 'Costo menor a mayor ↑' : 'Costo mayor a menor ↓'
+            }
+            <button
+              onClick={() => setOrdenCosto(null)}
+              className="ml-2 underline hover:no-underline"
+            >
+              Quitar orden
+            </button>
+          </div>
+        )}
         <CampoBusqueda
           valor={busqueda}
           onChange={setBusqueda}
@@ -194,12 +232,14 @@ const VistaOperaciones = ({
           prendas={prendas}
           onEditar={handleEditar}
           onEliminar={(id) => modalEliminar.abrir(id)}
+          ordenCosto={ordenCosto}
+          onCambiarOrdenCosto={handleCambiarOrdenCosto}
         />
 
         <Paginacion
           paginaActual={paginaActual}
           totalPaginas={totalPaginas}
-          totalItems={datosFiltrados.length}
+          totalItems={operacionesOrdenadas.length}
           primeraPagina={primeraPagina}
           paginaAnterior={paginaAnterior}
           paginaSiguiente={paginaSiguiente}
