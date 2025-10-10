@@ -5,6 +5,7 @@ export const TALLAS = ['S', 'M', 'L', 'XL', '2XL', '3XL'];
 export const COLORES_DISPONIBLES = [
   'Negro',
   'Blanco',
+  'Vino Tinto',
   'Azul',
   'Rojo',
   'Verde',
@@ -15,6 +16,7 @@ export const COLORES_DISPONIBLES = [
   'Morado',
   'Naranja',
   'Café'
+
 ];
 
 
