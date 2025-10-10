@@ -4,6 +4,7 @@ import { User, Package, Settings, BarChart3, DollarSign, LogOut, Plus, Monitor }
 import { iniciarSesion, cerrarSesion, obtenerUsuarioActual } from './services/authService';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import OfflineBanner from './components/common/OfflineBanner';
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 // Hooks personalizados
 import { useToast } from './hooks/useToast';
