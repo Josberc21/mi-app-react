@@ -13,7 +13,10 @@ export const formatearFechaCompleta = (fecha) => {
 };
 
 export const obtenerFechaHoy = () => {
-  return new Date().toISOString().split('T')[0];
+  const ahora = new Date();
+  const offset = ahora.getTimezoneOffset(); // en minutos
+  const localDate = new Date(ahora.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().split('T')[0];
 };
 
 export const calcularDiasEntre = (fechaInicio, fechaFin) => {
