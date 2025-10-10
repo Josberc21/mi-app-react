@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link, Outlet } from 'react-router-dom';
-import { User, Package, Settings, BarChart3, DollarSign, LogOut, Plus, Monitor } from 'lucide-react';
+import { User, Package, Settings, BarChart3, CircleDollarSign,SquareScissors, LogOut,Shirt,PencilRuler, Plus,Truck, Monitor } from 'lucide-react';
 import { iniciarSesion, cerrarSesion, obtenerUsuarioActual } from './services/authService';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import OfflineBanner from './components/common/OfflineBanner';
-import { SpeedInsights } from "@vercel/speed-insights/next"
 
 // Hooks personalizados
 import { useToast } from './hooks/useToast';
@@ -72,13 +71,13 @@ const AdminLayout = ({ handleLogout }) => {
             <h1 className="text-2xl font-bold">Admin</h1>
             <div className="flex gap-2 flex-wrap">
               <NavBtn to="/dashboard" icon={BarChart3} label="Dashboard" />
-              <NavBtn to="/asignar" icon={Plus} label="Asignar" />
+              <NavBtn to="/asignar" icon={SquareScissors} label="Asignar" />
               <NavBtn to="/empleados" icon={User} label="Empleados" />
-              <NavBtn to="/prendas" icon={Package} label="Prendas" />
-              <NavBtn to="/operaciones" icon={Settings} label="Operaciones" />
+              <NavBtn to="/prendas" icon={Shirt} label="Prendas" />
+              <NavBtn to="/operaciones" icon={PencilRuler} label="Operaciones" />
               <NavBtn to="/ordenes" icon={Package} label="Órdenes" />
-              <NavBtn to="/nomina" icon={DollarSign} label="Nómina" />
-              <NavBtn to="/remisiones" icon={Package} label="Remisiones" />
+              <NavBtn to="/nomina" icon={CircleDollarSign} label="Nómina" />
+              <NavBtn to="/remisiones" icon={Truck} label="Remisiones" />
               <NavBtn to="/taller-admin" icon={BarChart3} label="Taller Admin" />
               <NavBtn to="/taller-tv" icon={Monitor} label="Pantalla TV" />
               <button onClick={handleLogout} className="px-3 py-2 rounded bg-red-600 text-white text-sm">
