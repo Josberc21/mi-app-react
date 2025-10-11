@@ -1,12 +1,14 @@
 // src/constants/index.js
 
-export const TALLAS = ['S', 'M', 'L', 'XL', '2XL', '3XL'];
+export const TALLAS = ['10', '12', '14', '16', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 
 export const COLORES_DISPONIBLES = [
   'Negro',
   'Blanco',
   'Vino Tinto',
   'Azul',
+  'Azul Rey',
+  'Azul Claro',
   'Rojo',
   'Verde',
   'Amarillo',
