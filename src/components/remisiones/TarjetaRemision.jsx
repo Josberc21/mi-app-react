@@ -1,14 +1,50 @@
 import React from 'react';
 
-const TarjetaRemision = ({ 
-  remision, 
-  orden, 
-  prenda, 
-  expandida, 
-  onToggle, 
-  onImprimir, 
-  onEliminar 
+const TarjetaRemision = ({
+  remision,
+  orden,
+  prenda,
+  asignaciones,
+  expandida,
+  onToggle,
+  onImprimir,
+  onEliminar
 }) => {
+  // Calcular días reales de producción
+  const calcularTiempoProduccion = () => {
+  const asignacionesOrden = asignaciones.filter(a => 
+    a.orden_id === orden.id && a.completado && a.fecha_terminado
+  );
+
+  if (asignacionesOrden.length === 0) return null;
+
+  const fechasTerminadas = asignacionesOrden.map(a => new Date(a.fecha_terminado));
+  const fechaUltimaTerminacion = new Date(Math.max(...fechasTerminadas));
+  const fechaEntrada = new Date(orden.fecha_entrada);
+  
+  const diffMs = fechaUltimaTerminacion - fechaEntrada;
+  
+  const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  return { dias, horas, minutos, totalDias: dias };
+};
+
+const tiempoProduccion = calcularTiempoProduccion();
+
+  // Formatear fecha con hora
+  const formatearFechaHora = (fecha) => {
+    return new Date(fecha).toLocaleString('es-CO', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
     <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
       {/* HEADER - Siempre visible */}
@@ -43,21 +79,29 @@ const TarjetaRemision = ({
           <div className="space-y-2 mb-4">
             <p className="text-sm">
               <span className="font-semibold">Fecha despacho:</span>{' '}
-              {new Date(remision.fecha_despacho).toLocaleDateString('es-CO', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
+              {formatearFechaHora(remision.fecha_despacho)}
             </p>
             <p className="text-sm">
               <span className="font-semibold">Fecha entrada orden:</span>{' '}
-              {new Date(orden.fecha_entrada).toLocaleDateString('es-CO')}
+              {formatearFechaHora(orden.fecha_entrada)}
             </p>
             <p className="text-sm">
-              <span className="font-semibold">Días de producción:</span>{' '}
-              {Math.ceil((new Date(remision.fecha_despacho) - new Date(orden.fecha_entrada)) / (1000 * 60 * 60 * 24))} días
-            </p>
+  <span className="font-semibold">Tiempo de producción:</span>{' '}
+  {tiempoProduccion ? (
+    <span className={`px-2 py-1 rounded font-semibold ${
+      tiempoProduccion.totalDias > 15 ? 'bg-red-100 text-red-800' :
+      tiempoProduccion.totalDias > 10 ? 'bg-yellow-100 text-yellow-800' :
+      'bg-green-100 text-green-800'
+    }`}>
+      {tiempoProduccion.dias > 0 && `${tiempoProduccion.dias}d `}
+      {tiempoProduccion.horas}h {tiempoProduccion.minutos}m
+    </span>
+  ) : (
+    <span className="px-2 py-1 rounded font-semibold bg-gray-100 text-gray-600">
+      Sin iniciar
+    </span>
+  )}
+</p>
             {remision.observaciones && (
               <div className="bg-blue-50 p-3 rounded mt-3">
                 <p className="text-sm font-semibold text-gray-700">Observaciones:</p>

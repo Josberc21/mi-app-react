@@ -1,25 +1,24 @@
 // src/components/dashboard/VistaDashboard.jsx
 import React, { useMemo, useState } from 'react';
-import { 
-  User, Package, Clock, DollarSign, AlertTriangle, TrendingUp, 
-  TrendingDown, Activity, Zap, Target, Award, BarChart3, 
+import {
+  User, Package, Clock, DollarSign, AlertTriangle, TrendingUp,
+  TrendingDown, Activity, Zap, Target, Award, BarChart3,
   Calendar, ArrowUpRight, ArrowDownRight, Minus, Brain
 } from 'lucide-react';
-import { 
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, AreaChart, Area,
   ComposedChart, Scatter, Cell
 } from 'recharts';
 import TarjetaAlerta from './TarjetaAlerta';
 import TarjetaMetricaComparativa from './TarjetaMetricaComparativa';
-import PanelCuellosBottella from './PanelCuellosBottella';
 import SelectorPeriodo from './SelectorPeriodo';
 import { calcularDiasEntre } from '../../utils/dateUtils';
 import { formatearMoneda } from '../../utils/formatUtils';
-import { 
-  PERIODOS, 
-  obtenerRangoPeriodo, 
-  obtenerPeriodoAnterior, 
+import {
+  PERIODOS,
+  obtenerRangoPeriodo,
+  obtenerPeriodoAnterior,
   fechaEnRango,
   generarDiasEnRango,
   calcularCambio
@@ -38,7 +37,7 @@ const VistaDashboard = ({
 }) => {
   const [periodoActual, setPeriodoActual] = useState(PERIODOS.ULTIMOS_30_DIAS);
   const [alertasExpandidas, setAlertasExpandidas] = useState(true);
-  const [vistaComparativa, setVistaComparativa] = useState('metricas'); // 'metricas', 'graficos', 'operaciones'
+  const [vistaComparativa, setVistaComparativa] = useState('metricas');
 
   // ============================================
   // RANGOS DE TIEMPO
@@ -50,24 +49,24 @@ const VistaDashboard = ({
   // FILTRADO DE DATOS POR PERÍODO
   // ============================================
   const datosPeriodo = useMemo(() => {
-    const asignacionesActuales = asignaciones.filter(a => 
+    const asignacionesActuales = asignaciones.filter(a =>
       fechaEnRango(a.fecha, rangoActual)
     );
-    const asignacionesAnteriores = asignaciones.filter(a => 
+    const asignacionesAnteriores = asignaciones.filter(a =>
       fechaEnRango(a.fecha, rangoAnterior)
     );
 
-    const ordenesActuales = ordenes.filter(o => 
+    const ordenesActuales = ordenes.filter(o =>
       fechaEnRango(o.fecha_entrada, rangoActual)
     );
-    const ordenesAnteriores = ordenes.filter(o => 
+    const ordenesAnteriores = ordenes.filter(o =>
       fechaEnRango(o.fecha_entrada, rangoAnterior)
     );
 
-    const remisionesActuales = remisiones.filter(r => 
+    const remisionesActuales = remisiones.filter(r =>
       fechaEnRango(r.fecha_remision, rangoActual)
     );
-    const remisionesAnteriores = remisiones.filter(r => 
+    const remisionesAnteriores = remisiones.filter(r =>
       fechaEnRango(r.fecha_remision, rangoAnterior)
     );
 
@@ -85,8 +84,8 @@ const VistaDashboard = ({
   // MÉTRICAS COMPARATIVAS PRINCIPALES
   // ============================================
   const metricas = useMemo(() => {
-    const { 
-      asignacionesActuales, 
+    const {
+      asignacionesActuales,
       asignacionesAnteriores,
       ordenesActuales,
       ordenesAnteriores,
@@ -98,7 +97,7 @@ const VistaDashboard = ({
     const piezasCompletadasActual = asignacionesActuales
       .filter(a => a.completado)
       .reduce((sum, a) => sum + (a.cantidad || 0), 0);
-    
+
     const piezasCompletadasAnterior = asignacionesAnteriores
       .filter(a => a.completado)
       .reduce((sum, a) => sum + (a.cantidad || 0), 0);
@@ -106,21 +105,21 @@ const VistaDashboard = ({
     // 2. EFICIENCIA (% de completado)
     const totalAsignacionesActual = asignacionesActuales.length;
     const completadasActual = asignacionesActuales.filter(a => a.completado).length;
-    const eficienciaActual = totalAsignacionesActual > 0 
-      ? (completadasActual / totalAsignacionesActual) * 100 
+    const eficienciaActual = totalAsignacionesActual > 0
+      ? (completadasActual / totalAsignacionesActual) * 100
       : 0;
 
     const totalAsignacionesAnterior = asignacionesAnteriores.length;
     const completadasAnterior = asignacionesAnteriores.filter(a => a.completado).length;
-    const eficienciaAnterior = totalAsignacionesAnterior > 0 
-      ? (completadasAnterior / totalAsignacionesAnterior) * 100 
+    const eficienciaAnterior = totalAsignacionesAnterior > 0
+      ? (completadasAnterior / totalAsignacionesAnterior) * 100
       : 0;
 
     // 3. NÓMINA TOTAL
     const nominaActual = asignacionesActuales
       .filter(a => a.completado)
       .reduce((sum, a) => sum + parseFloat(a.monto || 0), 0);
-    
+
     const nominaAnterior = asignacionesAnteriores
       .filter(a => a.completado)
       .reduce((sum, a) => sum + parseFloat(a.monto || 0), 0);
@@ -132,14 +131,14 @@ const VistaDashboard = ({
     // 5. TIEMPO PROMEDIO DE ORDEN (días)
     const tiempoPromedioActual = ordenesActuales.length > 0
       ? ordenesActuales
-          .map(o => calcularDiasEntre(o.fecha_entrada, new Date()))
-          .reduce((a, b) => a + b, 0) / ordenesActuales.length
+        .map(o => calcularDiasEntre(o.fecha_entrada, new Date()))
+        .reduce((a, b) => a + b, 0) / ordenesActuales.length
       : 0;
 
     const tiempoPromedioAnterior = ordenesAnteriores.length > 0
       ? ordenesAnteriores
-          .map(o => calcularDiasEntre(o.fecha_entrada, new Date()))
-          .reduce((a, b) => a + b, 0) / ordenesAnteriores.length
+        .map(o => calcularDiasEntre(o.fecha_entrada, new Date()))
+        .reduce((a, b) => a + b, 0) / ordenesAnteriores.length
       : 0;
 
     // 6. PRODUCTIVIDAD POR DÍA
@@ -159,17 +158,17 @@ const VistaDashboard = ({
     // 8. UNIDADES DESPACHADAS
     const unidadesDespActual = remisionesActuales
       .reduce((sum, r) => sum + (r.cantidad_despachada || 0), 0);
-    
+
     const unidadesDespAnterior = remisionesAnteriores
       .reduce((sum, r) => sum + (r.cantidad_despachada || 0), 0);
 
     // 9. COSTO PROMEDIO POR PIEZA
-    const costoPiezaActual = piezasCompletadasActual > 0 
-      ? nominaActual / piezasCompletadasActual 
+    const costoPiezaActual = piezasCompletadasActual > 0
+      ? nominaActual / piezasCompletadasActual
       : 0;
-    
-    const costoPiezaAnterior = piezasCompletadasAnterior > 0 
-      ? nominaAnterior / piezasCompletadasAnterior 
+
+    const costoPiezaAnterior = piezasCompletadasAnterior > 0
+      ? nominaAnterior / piezasCompletadasAnterior
       : 0;
 
     return {
@@ -217,11 +216,11 @@ const VistaDashboard = ({
   // ============================================
   const evolucionTemporal = useMemo(() => {
     const dias = generarDiasEnRango(rangoActual);
-    
+
     return dias.map(dia => {
       const asignacionesDia = asignaciones.filter(a => {
-        const fechaAsig = typeof a.fecha === 'string' 
-          ? a.fecha.split('T')[0] 
+        const fechaAsig = typeof a.fecha === 'string'
+          ? a.fecha.split('T')[0]
           : new Date(a.fecha).toISOString().split('T')[0];
         return fechaAsig === dia;
       });
@@ -262,7 +261,7 @@ const VistaDashboard = ({
     const { asignacionesActuales } = datosPeriodo;
 
     const estadisticasPorOperacion = operaciones.map(op => {
-      const asignacionesOp = asignacionesActuales.filter(a => 
+      const asignacionesOp = asignacionesActuales.filter(a =>
         a.operacion_id === op.id && a.completado
       );
 
@@ -326,7 +325,7 @@ const VistaDashboard = ({
     const { asignacionesActuales } = datosPeriodo;
 
     const estadisticasPorEmpleado = empleados.map(emp => {
-      const asignacionesEmp = asignacionesActuales.filter(a => 
+      const asignacionesEmp = asignacionesActuales.filter(a =>
         a.empleado_id === emp.id && a.completado
       );
 
@@ -334,20 +333,32 @@ const VistaDashboard = ({
 
       const totalPiezas = asignacionesEmp.reduce((sum, a) => sum + (a.cantidad || 0), 0);
       const totalMonto = asignacionesEmp.reduce((sum, a) => sum + parseFloat(a.monto || 0), 0);
-      
-      const diasPeriodo = Math.ceil((rangoActual.fin - rangoActual.inicio) / (1000 * 60 * 60 * 24)) + 1;
-      const productividadDiaria = totalPiezas / diasPeriodo;
+
+      // Calcular días realmente trabajados
+      const diasTrabajados = new Set(
+        asignacionesEmp.map(a => {
+          const fecha = a.fecha_terminado || a.fecha;
+          return typeof fecha === 'string'
+            ? fecha.split('T')[0]
+            : new Date(fecha).toISOString().split('T')[0];
+        })
+      ).size;
+
+      const productividadDiaria = diasTrabajados > 0
+        ? Math.round(totalPiezas / diasTrabajados)
+        : 0;
 
       return {
         nombre: emp.nombre,
         totalPiezas,
         totalMonto,
-        productividadDiaria: productividadDiaria.toFixed(1),
+        productividadDiaria,
+        diasTrabajados,
         asignaciones: asignacionesEmp.length
       };
     }).filter(Boolean);
 
-    // Top 10 por piezas
+    // Top 10 por operaciones
     const topPorPiezas = [...estadisticasPorEmpleado]
       .sort((a, b) => b.totalPiezas - a.totalPiezas)
       .slice(0, 10);
@@ -362,7 +373,7 @@ const VistaDashboard = ({
       topPorPiezas,
       topPorNomina
     };
-  }, [empleados, datosPeriodo, rangoActual]);
+  }, [empleados, datosPeriodo]);
 
   // ============================================
   // ALERTAS ESTRATÉGICAS
@@ -395,7 +406,7 @@ const VistaDashboard = ({
     if (cambioCosto.direccion === 'up' && cambioCosto.porcentaje > 10) {
       alertas.push({
         tipo: 'advertencia',
-        titulo: 'Incremento en costo por pieza',
+        titulo: 'Incremento en costo por operación',
         mensaje: `+${cambioCosto.porcentaje}% vs período anterior`,
         accion: 'costos',
         datos: cambioCosto
@@ -435,7 +446,7 @@ const VistaDashboard = ({
     }
 
     // 5. Operaciones con tiempo excesivo
-    const operacionesLentas = analisisOperaciones.masLentas.filter(op => 
+    const operacionesLentas = analisisOperaciones.masLentas.filter(op =>
       parseFloat(op.tiempoPromedio) > 1.0
     );
 
@@ -451,7 +462,6 @@ const VistaDashboard = ({
 
     return alertas.slice(0, 6);
   }, [metricas, analisisOperaciones]);
-
   // ============================================
   // RENDER
   // ============================================
@@ -472,9 +482,9 @@ const VistaDashboard = ({
             <span className="text-sm">Comparación automática activada</span>
           </div>
         </div>
-        
+
         {/* Selector de período */}
-        <SelectorPeriodo 
+        <SelectorPeriodo
           periodoActual={periodoActual}
           onCambioPeriodo={setPeriodoActual}
         />
@@ -520,7 +530,7 @@ const VistaDashboard = ({
           icono={Zap}
           color="blue"
           formato="numero"
-          subtitulo="piezas/día promedio"
+          subtitulo="operaciones/día promedio"
         />
 
         <TarjetaMetricaComparativa
@@ -534,7 +544,7 @@ const VistaDashboard = ({
         />
 
         <TarjetaMetricaComparativa
-          titulo="Costo por Pieza"
+          titulo="Costo por Operacion"
           valorActual={metricas.costoPorPieza.actual}
           valorAnterior={metricas.costoPorPieza.anterior}
           icono={DollarSign}
@@ -558,7 +568,7 @@ const VistaDashboard = ({
       {/* MÉTRICAS SECUNDARIAS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <TarjetaMetricaComparativa
-          titulo="Piezas Completadas"
+          titulo="Operaciones Completadas"
           valorActual={metricas.piezasCompletadas.actual}
           valorAnterior={metricas.piezasCompletadas.anterior}
           icono={Package}
@@ -620,12 +630,12 @@ const VistaDashboard = ({
             <AreaChart data={evolucionTemporal}>
               <defs>
                 <linearGradient id="colorCompletadas" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
                 </linearGradient>
                 <linearGradient id="colorPendientes" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1}/>
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" />
@@ -633,20 +643,20 @@ const VistaDashboard = ({
               <YAxis />
               <Tooltip />
               <Legend />
-              <Area 
-                type="monotone" 
-                dataKey="completadas" 
-                stroke="#10b981" 
-                fillOpacity={1} 
-                fill="url(#colorCompletadas)" 
+              <Area
+                type="monotone"
+                dataKey="completadas"
+                stroke="#10b981"
+                fillOpacity={1}
+                fill="url(#colorCompletadas)"
                 name="Completadas"
               />
-              <Area 
-                type="monotone" 
-                dataKey="pendientes" 
-                stroke="#f59e0b" 
-                fillOpacity={1} 
-                fill="url(#colorPendientes)" 
+              <Area
+                type="monotone"
+                dataKey="pendientes"
+                stroke="#f59e0b"
+                fillOpacity={1}
+                fill="url(#colorPendientes)"
                 name="Pendientes"
               />
             </AreaChart>
@@ -664,18 +674,18 @@ const VistaDashboard = ({
               <YAxis yAxisId="right" orientation="right" />
               <Tooltip />
               <Legend />
-              <Bar 
+              <Bar
                 yAxisId="right"
-                dataKey="nomina" 
-                fill="#3b82f6" 
+                dataKey="nomina"
+                fill="#3b82f6"
                 name="Nómina ($)"
                 opacity={0.6}
               />
-              <Line 
+              <Line
                 yAxisId="left"
-                type="monotone" 
-                dataKey="eficiencia" 
-                stroke="#10b981" 
+                type="monotone"
+                dataKey="eficiencia"
+                stroke="#10b981"
                 strokeWidth={3}
                 name="Eficiencia (%)"
               />
@@ -686,51 +696,81 @@ const VistaDashboard = ({
 
       {/* RANKINGS Y ANÁLISIS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Empleados */}
+        {/* Top Empleados por Producción */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Award className="w-6 h-6 text-yellow-600" />
+
             <h3 className="font-bold text-lg">🏆 Top 10 Empleados - Producción</h3>
           </div>
           <div className="space-y-3">
-            {rankingEmpleados.topPorPiezas.map((emp, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                  idx === 0 ? 'bg-yellow-400 text-yellow-900' :
-                  idx === 1 ? 'bg-gray-300 text-gray-700' :
-                  idx === 2 ? 'bg-orange-400 text-orange-900' :
-                  'bg-blue-100 text-blue-700'
-                }`}>
-                  {idx + 1}
+            {rankingEmpleados.topPorPiezas.map((emp, idx) => {
+              // Obtener desglose de operaciones
+              const { asignacionesActuales } = datosPeriodo;
+              const asignacionesEmp = asignacionesActuales.filter(a =>
+                a.empleado_id === empleados.find(e => e.nombre === emp.nombre)?.id && a.completado
+              );
+
+              // Agrupar por operación
+              const operacionesDesglose = {};
+              asignacionesEmp.forEach(asig => {
+                const operacion = operaciones.find(op => op.id === asig.operacion_id);
+                if (operacion) {
+                  const nombreOp = operacion.nombre;
+                  operacionesDesglose[nombreOp] = (operacionesDesglose[nombreOp] || 0) + (asig.cantidad || 0);
+                }
+              });
+
+              // Crear texto de desglose (top 4 operaciones)
+              const desgloseTexto = Object.entries(operacionesDesglose)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 4)
+                .map(([op, cant]) => `${cant} ${op.toLowerCase()}`)
+                .join(', ');
+
+              const hayMas = Object.keys(operacionesDesglose).length > 4;
+
+              return (
+                <div key={idx} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${idx === 0 ? 'bg-yellow-400 text-yellow-900' :
+                        idx === 1 ? 'bg-gray-300 text-gray-700' :
+                          idx === 2 ? 'bg-orange-400 text-orange-900' :
+                            'bg-blue-100 text-blue-700'
+                      }`}>
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-semibold text-gray-900">{emp.nombre}</p>
+                        <p className="font-bold text-gray-900 text-lg">{emp.totalPiezas}</p>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-1">operaciones completadas</p>
+                      {desgloseTexto && (
+                        <p className="text-xs text-gray-600 italic leading-relaxed">
+                          ({desgloseTexto}{hayMas ? '...' : ''})
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900">{emp.nombre}</p>
-                  <p className="text-xs text-gray-500">{emp.productividadDiaria} piezas/día</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">{emp.totalPiezas}</p>
-                  <p className="text-xs text-gray-500">piezas</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
         {/* Top Empleados por Nómina */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center gap-2 mb-4">
-            <DollarSign className="w-6 h-6 text-green-600" />
             <h3 className="font-bold text-lg">💵 Top 10 Empleados - Nómina</h3>
           </div>
           <div className="space-y-3">
             {rankingEmpleados.topPorNomina.map((emp, idx) => (
               <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                  idx === 0 ? 'bg-green-400 text-green-900' :
-                  idx === 1 ? 'bg-green-300 text-green-800' :
-                  idx === 2 ? 'bg-green-200 text-green-700' :
-                  'bg-green-100 text-green-600'
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? 'bg-green-400 text-green-900' :
+                    idx === 1 ? 'bg-green-300 text-green-800' :
+                      idx === 2 ? 'bg-green-200 text-green-700' :
+                        'bg-green-100 text-green-600'
+                  }`}>
                   {idx + 1}
                 </div>
                 <div className="flex-1">
@@ -746,53 +786,93 @@ const VistaDashboard = ({
           </div>
         </div>
 
-        {/* Top Operaciones por Volumen */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-6 h-6 text-blue-600" />
-            <h3 className="font-bold text-lg">🔧 Top 5 Operaciones - Volumen</h3>
+{/* Top 5 Operaciones - Análisis Completo (NUEVA SECCIÓN) */}
+<div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="font-bold text-lg">🔧 Top 5 Operaciones - Análisis Completo</h3>
+    <div className="flex gap-2 text-xs">
+      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">Volumen</span>
+      <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full font-semibold">Costo</span>
+      <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full font-semibold">Tiempo</span>
+    </div>
+  </div>
+  <div className="space-y-3">
+    {analisisOperaciones.topPorVolumen.slice(0, 5).map((op, idx) => {
+      const porcentaje = (op.totalPiezas / analisisOperaciones.topPorVolumen[0].totalPiezas) * 100;
+      return (
+        <div key={idx} className="relative bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all">
+          <div className="flex items-center gap-4">
+            {/* Ranking Badge */}
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 ${
+              idx === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-white shadow-lg' :
+              idx === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-700 shadow-md' :
+              idx === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-md' :
+              'bg-blue-100 text-blue-600'
+            }`}>
+              {idx + 1}
+            </div>
+            
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h4 className="font-bold text-gray-900 text-lg">{op.operacion}</h4>
+                  <p className="text-xs text-gray-500">{op.asignaciones} asignaciones completadas</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-black text-blue-600">{op.totalPiezas.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">operaciones procesadas</p>
+                </div>
+              </div>
+              
+              {/* Barra de progreso */}
+              <div className="mb-2">
+                <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                  <span>Participación en volumen total</span>
+                  <span className="font-semibold">{Math.round(porcentaje)}%</span>
+                </div>
+                <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-500 ${
+                      idx === 0 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                      'bg-blue-400'
+                    }`}
+                    style={{ width: `${porcentaje}%` }}
+                  />
+                </div>
+              </div>
+              
+              {/* Métricas adicionales */}
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                  <span className="text-gray-600">Costo unitario:</span>
+                  <span className="font-semibold text-gray-900">${formatearMoneda(op.costoPromedio)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Package className="w-4 h-4 text-purple-600" />
+                  <span className="text-gray-600">Costo total:</span>
+                  <span className="font-semibold text-green-600">${formatearMoneda(op.totalMonto)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4 text-orange-600" />
+                  <span className="text-gray-600">Tiempo:</span>
+                  <span className="font-semibold text-gray-900">{op.tiempoPromedio} días/operación</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={analisisOperaciones.topPorVolumen} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="operacion" type="category" width={100} />
-              <Tooltip formatter={(value) => `${value.toLocaleString()} piezas`} />
-              <Bar dataKey="totalPiezas" fill="#3b82f6" name="Piezas">
-                {analisisOperaciones.topPorVolumen.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={`hsl(${220 - index * 15}, 70%, ${50 + index * 5}%)`} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
         </div>
+      );
+    })}
+  </div>
+</div>
 
-        {/* Operaciones más Costosas */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <DollarSign className="w-6 h-6 text-amber-600" />
-            <h3 className="font-bold text-lg">💰 Top 5 Operaciones - Costo</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={analisisOperaciones.topPorCosto} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="operacion" type="category" width={100} />
-              <Tooltip formatter={(value) => `$${formatearMoneda(value)}/pieza`} />
-              <Bar dataKey="costoPromedio" fill="#f59e0b" name="Costo Prom.">
-                {analisisOperaciones.topPorCosto.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={`hsl(${45 - index * 10}, 80%, ${50 + index * 5}%)`} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </div>
 
       {/* ANÁLISIS DE CUELLOS DE BOTELLA */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="w-6 h-6 text-red-600" />
           <h3 className="font-bold text-lg">⚠️ Operaciones más Lentas (Período Actual)</h3>
         </div>
         <div className="overflow-x-auto">
@@ -801,7 +881,7 @@ const VistaDashboard = ({
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Operación</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Tiempo Promedio</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Piezas Procesadas</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Procesadas</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Costo Promedio</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Asignaciones</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Estado</th>
@@ -811,23 +891,21 @@ const VistaDashboard = ({
               {analisisOperaciones.masLentas.map((op, idx) => {
                 const tiempo = parseFloat(op.tiempoPromedio);
                 const criticidad = tiempo > 1.5 ? 'crítico' : tiempo > 1.0 ? 'advertencia' : 'normal';
-                
+
                 return (
-                  <tr key={idx} className={`hover:bg-gray-50 ${
-                    criticidad === 'crítico' ? 'border-l-4 border-red-500 bg-red-50' :
-                    criticidad === 'advertencia' ? 'border-l-4 border-yellow-500 bg-yellow-50' :
-                    ''
-                  }`}>
+                  <tr key={idx} className={`hover:bg-gray-50 ${criticidad === 'crítico' ? 'border-l-4 border-red-500 bg-red-50' :
+                      criticidad === 'advertencia' ? 'border-l-4 border-yellow-500 bg-yellow-50' :
+                        ''
+                    }`}>
                     <td className="px-4 py-3">
                       <span className="font-semibold text-gray-900">{op.operacion}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`font-bold ${
-                        criticidad === 'crítico' ? 'text-red-600' :
-                        criticidad === 'advertencia' ? 'text-yellow-600' :
-                        'text-green-600'
-                      }`}>
-                        {op.tiempoPromedio} días/pieza
+                      <span className={`font-bold ${criticidad === 'crítico' ? 'text-red-600' :
+                          criticidad === 'advertencia' ? 'text-yellow-600' :
+                            'text-green-600'
+                        }`}>
+                        {op.tiempoPromedio} días/operación
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -840,14 +918,13 @@ const VistaDashboard = ({
                       <span className="text-gray-600">{op.asignaciones}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                        criticidad === 'crítico' ? 'bg-red-100 text-red-800' :
-                        criticidad === 'advertencia' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${criticidad === 'crítico' ? 'bg-red-100 text-red-800' :
+                          criticidad === 'advertencia' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                        }`}>
                         {criticidad === 'crítico' ? '🔴 Crítico' :
-                         criticidad === 'advertencia' ? '🟡 Lento' :
-                         '🟢 Normal'}
+                          criticidad === 'advertencia' ? '🟡 Lento' :
+                            '🟢 Normal'}
                       </span>
                     </td>
                   </tr>
@@ -861,7 +938,6 @@ const VistaDashboard = ({
       {/* RESUMEN COMPARATIVO */}
       <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-lg p-6">
         <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-indigo-600" />
           📊 Resumen Comparativo del Período
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -879,7 +955,7 @@ const VistaDashboard = ({
             </div>
             <p className="text-2xl font-bold text-gray-900">{metricas.productividadDiaria.actual}</p>
             <p className="text-xs text-gray-500 mt-1">
-              piezas/día (antes: {metricas.productividadDiaria.anterior})
+              operaciones/día (antes: {metricas.productividadDiaria.anterior})
             </p>
           </div>
 
@@ -904,7 +980,7 @@ const VistaDashboard = ({
           {/* Costo */}
           <div className="bg-white rounded-lg p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">Costo/Pieza</span>
+              <span className="text-sm font-medium text-gray-600">Costo/Operación</span>
               {calcularCambio(metricas.costoPorPieza.actual, metricas.costoPorPieza.anterior).direccion === 'down' ? (
                 <ArrowDownRight className="w-5 h-5 text-green-600" />
               ) : calcularCambio(metricas.costoPorPieza.actual, metricas.costoPorPieza.anterior).direccion === 'up' ? (
@@ -1001,8 +1077,8 @@ const VistaDashboard = ({
       {/* FOOTER INFORMATIVO */}
       <div className="bg-gray-100 rounded-lg p-4 text-center">
         <p className="text-sm text-gray-600">
-          <span className="font-semibold">Dashboard Estratégico</span> • 
-          Actualizado: {new Date().toLocaleString('es-CO')} • 
+          <span className="font-semibold">Dashboard Estratégico</span> •
+          Actualizado: {new Date().toLocaleString('es-CO')} •
           {empleados.length} empleados • {ordenes.length} órdenes • {asignaciones.length} asignaciones
         </p>
         <p className="text-xs text-gray-500 mt-1">

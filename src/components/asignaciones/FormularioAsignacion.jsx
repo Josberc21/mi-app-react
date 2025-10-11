@@ -72,8 +72,7 @@ const FormularioAsignacion = ({
 
               return (
                 <option key={o.id} value={o.id}>
-                  {o.numero_orden} - {prenda?.referencia} {o.color} {o.talla} 
-                  ({completadas}/{o.cantidad_total} completas)
+                 {o.numero_orden} - {prenda?.referencia} - {o.color} - Talla {o.talla} ({completadas}/{o.cantidad_total} completas)
                 </option>
               );
             })}

@@ -1,7 +1,31 @@
 import React from 'react';
 import { formatearFecha, calcularDiasEntre } from '../../utils/dateUtils';
 
-const TablaTrazabilidad = ({ ordenes, prendas, remisiones, calcularProgresoOrden }) => {
+const TablaTrazabilidad = ({ ordenes, prendas, remisiones, calcularProgresoOrden, asignaciones }) => {
+  
+  // Función para calcular el tiempo real de producción
+  const calcularTiempoProduccion = (orden) => {
+    const asignacionesOrden = asignaciones.filter(a => 
+      a.orden_id === orden.id && a.completado && a.fecha_terminado
+    );
+
+    if (asignacionesOrden.length === 0) {
+      return null;
+    }
+
+    const fechasTerminadas = asignacionesOrden.map(a => new Date(a.fecha_terminado));
+    const fechaUltimaTerminacion = new Date(Math.max(...fechasTerminadas));
+    const fechaEntrada = new Date(orden.fecha_entrada);
+    
+    const diffMs = fechaUltimaTerminacion - fechaEntrada;
+    
+    const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { dias, horas, minutos, totalDias: dias };
+  };
+
   return (
     <div className="bg-white rounded-lg shadow p-6 mt-6">
       <h2 className="text-xl font-bold mb-4">📊 Trazabilidad Completa de Órdenes</h2>
@@ -16,7 +40,7 @@ const TablaTrazabilidad = ({ ordenes, prendas, remisiones, calcularProgresoOrden
               <th className="px-4 py-3 text-left">Fecha Entrada</th>
               <th className="px-4 py-3 text-left">Progreso</th>
               <th className="px-4 py-3 text-left">Despachadas</th>
-              <th className="px-4 py-3 text-left">Días Transcurridos</th>
+              <th className="px-4 py-3 text-left">Tiempo de Producción</th>
               <th className="px-4 py-3 text-left">Estado</th>
             </tr>
           </thead>
@@ -28,7 +52,7 @@ const TablaTrazabilidad = ({ ordenes, prendas, remisiones, calcularProgresoOrden
                 .filter(r => r.orden_id === orden.id)
                 .reduce((sum, r) => sum + r.cantidad_despachada, 0);
 
-              const diasDesdeEntrada = calcularDiasEntre(orden.fecha_entrada, new Date());
+              const tiempo = calcularTiempoProduccion(orden);
 
               let estado = 'En Producción';
               let colorEstado = 'bg-blue-100 text-blue-800';
@@ -78,13 +102,31 @@ const TablaTrazabilidad = ({ ordenes, prendas, remisiones, calcularProgresoOrden
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-3 py-1 rounded font-semibold ${
-                      diasDesdeEntrada > 15 ? 'bg-red-100 text-red-800' :
-                      diasDesdeEntrada > 10 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {diasDesdeEntrada} días
-                    </span>
+                    {(() => {
+                      if (!tiempo) {
+                        return (
+                          <span className="px-3 py-1 rounded font-semibold bg-gray-100 text-gray-600">
+                            Sin iniciar
+                          </span>
+                        );
+                      }
+                      
+                      const textoTiempo = [
+                        tiempo.dias > 0 ? `${tiempo.dias}d` : '',
+                        `${tiempo.horas}h`,
+                        tiempo.minutos > 0 ? `${tiempo.minutos}m` : ''
+                      ].filter(Boolean).join(' ');
+
+                      return (
+                        <span className={`px-3 py-1 rounded font-semibold ${
+                          tiempo.totalDias > 15 ? 'bg-red-100 text-red-800' :
+                          tiempo.totalDias > 10 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {textoTiempo}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-3 py-1 rounded text-xs font-semibold ${colorEstado}`}>

@@ -117,9 +117,19 @@ const VistaRemisiones = ({
     const orden = ordenes.find(o => o.id === remision.orden_id);
     const prenda = prendas.find(p => p.id === orden?.prenda_id);
 
-    const fechaOrden = new Date(orden.fecha_entrada);
-    const fechaDespacho = new Date(remision.fecha_despacho);
-    const diasProduccion = Math.ceil((fechaDespacho - fechaOrden) / (1000 * 60 * 60 * 24));
+    // Calcular días reales de producción
+    const asignacionesOrden = asignaciones.filter(a => 
+      a.orden_id === orden.id && a.completado && a.fecha_terminado
+    );
+
+    let diasProduccion = 0;
+    if (asignacionesOrden.length > 0) {
+      const fechasTerminadas = asignacionesOrden.map(a => new Date(a.fecha_terminado));
+      const fechaUltimaTerminacion = new Date(Math.max(...fechasTerminadas));
+      const fechaEntrada = new Date(orden.fecha_entrada);
+      const diffMs = fechaUltimaTerminacion - fechaEntrada;
+      diasProduccion = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    }
 
     const ventana = window.open('', '', 'width=800,height=600');
     ventana.document.write(`
@@ -246,20 +256,24 @@ const VistaRemisiones = ({
           </div>
           <div class="info-row">
             <span class="label">Fecha de Despacho:</span>
-            <span class="value">${new Date(remision.fecha_despacho).toLocaleDateString('es-CO', {
+            <span class="value">${new Date(remision.fecha_despacho).toLocaleString('es-CO', {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
-              day: 'numeric'
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
             })}</span>
           </div>
           <div class="info-row">
             <span class="label">Fecha de Entrada:</span>
-            <span class="value">${new Date(orden.fecha_entrada).toLocaleDateString('es-CO', {
+            <span class="value">${new Date(orden.fecha_entrada).toLocaleString('es-CO', {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
-              day: 'numeric'
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
             })}</span>
           </div>
         </div>
@@ -267,7 +281,7 @@ const VistaRemisiones = ({
         <div class="metrics">
           <div class="metric-box">
             <div class="metric-value">${diasProduccion}</div>
-            <div class="metric-label">Días de Producción</div>
+            <div class="metric-label">Tiempo de Producción</div>
           </div>
           <div class="metric-box">
             <div class="metric-value">${remision.cantidad_despachada}</div>
@@ -391,6 +405,7 @@ const VistaRemisiones = ({
                 remision={rem}
                 orden={ordenes.find(o => o.id === rem.orden_id)}
                 prenda={prendas.find(p => p.id === ordenes.find(o => o.id === rem.orden_id)?.prenda_id)}
+                asignaciones={asignaciones}
                 expandida={remisionesExpandidas[rem.id]}
                 onToggle={() => toggleRemisionExpandida(rem.id)}
                 onImprimir={() => handleImprimir(rem)}
@@ -412,6 +427,7 @@ const VistaRemisiones = ({
         prendas={prendas}
         remisiones={remisiones}
         calcularProgresoOrden={calcularProgresoOrden}
+        asignaciones={asignaciones}
       />
     </div>
   );

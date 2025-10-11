@@ -40,10 +40,10 @@ const FormularioRemision = ({
                 const disponibles = progreso.completadas - yaDespachadas;
 
                 return (
-                  <option key={o.id} value={o.id}>
-                    {o.numero_orden} - {prenda?.referencia} {o.color} ({disponibles} disponibles)
-                  </option>
-                );
+  <option key={o.id} value={o.id}>
+    {o.numero_orden} - {prenda?.referencia} {o.color} - Talla {o.talla} ({disponibles} disponibles)
+  </option>
+);
               })}
           </select>
           {formRemision.orden_id && (() => {
