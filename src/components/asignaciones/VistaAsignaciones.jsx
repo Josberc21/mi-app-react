@@ -220,9 +220,11 @@ await completarAsignacion(asignacion.id, cantidadEntregada, montoEntregado);
 
         mostrarExito(`Entregadas ${cantidadEntregada} piezas. Quedan ${resto} pendientes.`);
       } else {
-        await completarAsignacion(asignacion.id, cantidadEntregada);
-        mostrarExito('Asignación completada');
-      }
+      const operacion = operaciones.find(o => o.id === asignacion.operacion_id);
+      const montoTotal = operacion.costo * cantidadEntregada;
+      await completarAsignacion(asignacion.id, cantidadEntregada, montoTotal);
+      mostrarExito('Asignación completada');
+    }
 
       await recargarDatos();
     } catch (error) {
@@ -245,7 +247,8 @@ await completarAsignacion(asignacion.id, cantidadEntregada, montoEntregado);
       if (cantidadRevertir < asignacion.cantidad) {
         const quedan = asignacion.cantidad - cantidadRevertir;
 
-        await completarAsignacion(asignacion.id, quedan);
+        const montoQuedan = operacion.costo * quedan;
+await completarAsignacion(asignacion.id, quedan, montoQuedan);
 
         await crearAsignacion({
           empleado_id: asignacion.empleado_id,
