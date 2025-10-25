@@ -46,11 +46,12 @@ export const actualizarAsignacion = async (id, campos) => {
   return data;
 };
 
-export const completarAsignacion = async (id, cantidad) => {
+export const completarAsignacion = async (id, cantidad, monto) => {
   const { data, error } = await supabase
     .from('asignaciones')
     .update({
       cantidad: parseInt(cantidad),
+      monto: parseFloat(monto),
       completado: true,
       fecha_terminado: new Date().toISOString().split('T')[0]
     })

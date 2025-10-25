@@ -203,7 +203,8 @@ const VistaAsignaciones = ({
         const resto = asignacion.cantidad - cantidadEntregada;
         const operacion = operaciones.find(o => o.id === asignacion.operacion_id);
 
-        await completarAsignacion(asignacion.id, cantidadEntregada);
+        const montoEntregado = operacion.costo * cantidadEntregada;
+await completarAsignacion(asignacion.id, cantidadEntregada, montoEntregado);
 
         await crearAsignacion({
           empleado_id: asignacion.empleado_id,
