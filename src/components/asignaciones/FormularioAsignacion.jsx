@@ -49,7 +49,7 @@ const FormularioAsignacion = ({
         <select
           value={formAsig.orden_id}
           onChange={(e) => onSeleccionarOrden(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg text-sm"
+         className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
         >
           <option value="">-- Seleccione una orden --</option>
           {ordenes
@@ -71,7 +71,14 @@ const FormularioAsignacion = ({
               );
 
               return (
-                <option key={o.id} value={o.id}>
+                <option 
+  key={o.id} 
+  value={o.id}
+  style={{
+    backgroundColor: o.id % 2 === 0 ? '#f9fafb' : '#ffffff',
+    padding: '8px'
+  }}
+>
                  {o.numero_orden} - {prenda?.referencia} - {o.color} - Talla {o.talla} ({completadas}/{o.cantidad_total} completas)
                 </option>
               );
@@ -138,10 +145,16 @@ const FormularioAsignacion = ({
                 
                 return (
                   <option 
-                    key={op.id} 
-                    value={op.id}
-                    disabled={disponibles === 0}
-                  >
+  key={op.id} 
+  value={op.id}
+  disabled={disponibles === 0}
+  style={{
+    backgroundColor: disponibles === 0 ? '#fee2e2' : (op.id % 2 === 0 ? '#f9fafb' : '#ffffff'),
+    color: disponibles === 0 ? '#991b1b' : '#111827',
+    fontWeight: disponibles === 0 ? '500' : 'normal',
+    padding: '8px'
+  }}
+>
                     {op.nombre} - ${op.costo} 
                     {disp && ` | ${asignadas}/${total} asignadas (${disponibles} disponibles)`}
                   </option>
