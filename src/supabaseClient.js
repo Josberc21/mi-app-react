@@ -18,10 +18,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     }
   }
 })
-
-// 🔍 Para debugging: Ver si la sesión está guardada
-if (import.meta.env.DEV) {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    console.log('📦 Sesión actual:', session ? 'Activa' : 'No hay sesión')
-  })
-}

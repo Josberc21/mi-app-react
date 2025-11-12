@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link, Outlet } from 'react-router-dom';
 import { User, Package, Settings, BarChart3, CircleDollarSign,SquareScissors, LogOut,Shirt,PencilRuler, Plus,Truck, Monitor } from 'lucide-react';
 import { iniciarSesion, cerrarSesion, obtenerUsuarioActual } from './services/authService';
+import { supabase } from './supabaseClient';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import OfflineBanner from './components/common/OfflineBanner';
+
 
 // Hooks personalizados
 import { useToast } from './hooks/useToast';
@@ -146,6 +148,7 @@ const ProtectedRoute = ({ user, children }) => {
 // ===================================================================
 function AppContent() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const navigate = useNavigate();
 
   const { toast, cerrarToast, mostrarExito, mostrarError, mostrarAdvertencia, mostrarInfo } = useToast();
@@ -153,17 +156,54 @@ function AppContent() {
   const { calcularNominaEmpleado, calcularNominaTotal, calcularProgresoOrden, estadisticasDashboard } = useCalculos(asignaciones, empleados, operaciones, ordenes, prendas);
   const { isOnline } = useOnlineStatus();
 
-  // Verificar sesión al cargar la app
-  useEffect(() => {
-    const verificarSesionInicial = async () => {
-      const usuario = await obtenerUsuarioActual();
-      if (usuario) {
-        setCurrentUser(usuario);
+// 1️⃣ Verificar sesión al cargar (solo al montar el componente)
+useEffect(() => {
+  const cargarSesion = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const usuario = await obtenerUsuarioActual();
+        if (usuario) {
+          setCurrentUser(usuario);
+          
+          // Solo navegar si estamos en /login o en la raíz sin usuario
+          const rutaActual = window.location.pathname;
+          if (rutaActual === '/login' || rutaActual === '/') {
+            const rutaDestino = usuario.role === 'admin' ? '/dashboard' : '/operario-panel';
+            navigate(rutaDestino, { replace: true });
+          }
+        }
       }
-    };
-    
-    verificarSesionInicial();
-  }, []);
+    } catch (error) {
+      console.error('Error al cargar sesión:', error);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+  
+  cargarSesion();
+}, []); // 👈 Array vacío - solo se ejecuta UNA vez al montar
+
+// 2️⃣ Escuchar cambios de autenticación (listener permanente)
+useEffect(() => {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      // Solo procesar logout y refresh de token
+      // El login se maneja manualmente en handleLogin
+      if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        const usuario = await obtenerUsuarioActual();
+        if (usuario) {
+          setCurrentUser(usuario);
+        }
+      }
+    }
+  );
+
+  return () => subscription.unsubscribe();
+}, []); // Array vacío = se monta una sola vez y queda escuchando
 
   // 🎯 CALCULAR META DINÁMICA DEL DÍA (para Pantalla TV)
 const calcularMetaDiaria = () => {
@@ -180,17 +220,19 @@ const calcularMetaDiaria = () => {
 };
 
   // Login
-  const handleLogin = async (username, password) => {
-    const result = await iniciarSesion(username, password);
-    
-    if (result.success) {
-      setCurrentUser(result.user);
-      mostrarExito(`Bienvenido ${result.user.nombre || result.user.username}`);
-      navigate(result.user.role === 'admin' ? '/dashboard' : '/operario-panel');
-    } else {
-      mostrarError('Credenciales incorrectas');
-    }
-  };
+const handleLogin = async (username, password) => {
+  const result = await iniciarSesion(username, password);
+  
+  if (result.success) {
+    setCurrentUser(result.user);
+    setAuthLoading(false);
+    mostrarExito(`Bienvenido ${result.user.nombre || result.user.username}`);
+    navigate(result.user.role === 'admin' ? '/dashboard' : '/operario-panel');
+  } else {
+    setAuthLoading(false);
+    mostrarError(result.error || 'Credenciales incorrectas');
+  }
+};
 
   // Logout
   const handleLogout = async () => {
@@ -205,6 +247,17 @@ const calcularMetaDiaria = () => {
       <OfflineBanner isOnline={isOnline} />
       <Toast toast={toast} onClose={cerrarToast} />
       {loading && <Loading />}
+      {/* Mostrar loading mientras verifica autenticación */}
+    {authLoading && (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Verificando sesión...</p>
+        </div>
+      </div>
+    )}
+    
+    {!authLoading && (
 
       <Routes>
         {/* --- RUTAS PÚBLICAS --- */}
@@ -266,6 +319,7 @@ const calcularMetaDiaria = () => {
         {/* --- RUTA COMODÍN --- */}
         <Route path="*" element={<Navigate to="/taller-tv" replace />} />
       </Routes>
+    )}
     </>
   );
 }

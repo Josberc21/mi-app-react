@@ -50,17 +50,29 @@ export const cerrarSesion = async () => {
  * Obtiene el usuario actual desde la sesión
  */
 export const obtenerUsuarioActual = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session) return null;
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      return null;
+    }
+    
+    const { data: userData, error: userError } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('auth_id', session.user.id)
+      .single();
 
-  const { data: userData } = await supabase
-    .from('usuarios')
-    .select('*')
-    .eq('auth_id', session.user.id)
-    .single();
+    if (userError) {
+      console.error('Error al obtener datos del usuario:', userError);
+      return null;
+    }
 
-  return userData;
+    return userData;
+  } catch (error) {
+    console.error('Error en obtenerUsuarioActual:', error);
+    return null;
+  }
 };
 
 /**
