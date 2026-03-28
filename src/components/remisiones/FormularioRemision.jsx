@@ -1,26 +1,27 @@
 import React from 'react';
+import { Truck, Calendar, FileText, Save } from 'lucide-react';
 
-const FormularioRemision = ({ 
-  formRemision, 
-  setFormRemision, 
-  ordenes, 
-  prendas, 
+const FormularioRemision = ({
+  formRemision,
+  setFormRemision,
+  ordenes,
+  prendas,
   remisiones,
   calcularProgresoOrden,
   onSeleccionarOrden,
-  onSubmit 
+  onSubmit
 }) => {
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Orden de Producción
+          <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+            <Truck className="w-3.5 h-3.5" /> Orden de Producción
           </label>
           <select
             value={formRemision.orden_id}
             onChange={(e) => onSeleccionarOrden(e.target.value)}
-            className="w-full px-3 py-2 border rounded"
+            className="input-base"
           >
             <option value="">Seleccione orden</option>
             {ordenes
@@ -38,76 +39,79 @@ const FormularioRemision = ({
                   .filter(r => r.orden_id === o.id)
                   .reduce((sum, r) => sum + r.cantidad_despachada, 0);
                 const disponibles = progreso.completadas - yaDespachadas;
-
                 return (
-  <option key={o.id} value={o.id}>
-    {o.numero_orden} - {prenda?.referencia} {o.color} - Talla {o.talla} ({disponibles} disponibles)
-  </option>
-);
+                  <option key={o.id} value={o.id}>
+                    {o.numero_orden} - {prenda?.referencia} {o.color} T{o.talla} ({disponibles} disp.)
+                  </option>
+                );
               })}
           </select>
           {formRemision.orden_id && (() => {
             const orden = ordenes.find(o => o.id === parseInt(formRemision.orden_id));
+            if (!orden) return null;
             const progreso = calcularProgresoOrden(orden);
             const yaDespachadas = remisiones
               .filter(r => r.orden_id === orden.id)
               .reduce((sum, r) => sum + r.cantidad_despachada, 0);
             const disponibles = progreso.completadas - yaDespachadas;
             return (
-              <p className="text-xs text-gray-600 mt-1">
-                Total orden: {orden.cantidad_total} | Completadas: {progreso.completadas} |
-                Ya despachadas: {yaDespachadas} | <strong>Disponibles: {disponibles}</strong>
-              </p>
+              <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                <span>Total: <strong className="text-slate-700">{orden.cantidad_total}</strong></span>
+                <span>Completadas: <strong className="text-slate-700">{progreso.completadas}</strong></span>
+                <span>Despachadas: <strong className="text-slate-700">{yaDespachadas}</strong></span>
+                <span className="text-brand-600 font-semibold">Disponibles: {disponibles}</span>
+              </div>
             );
           })()}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
             Cantidad a Despachar
           </label>
           <input
             type="number"
             value={formRemision.cantidad_despachada}
             onChange={(e) => setFormRemision({ ...formRemision, cantidad_despachada: e.target.value })}
-            className="w-full px-3 py-2 border rounded"
+            className="input-base"
             placeholder="0"
             min="1"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fecha Despacho
+          <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" /> Fecha Despacho
           </label>
           <input
             type="date"
             value={formRemision.fecha_despacho}
             onChange={(e) => setFormRemision({ ...formRemision, fecha_despacho: e.target.value })}
-            className="w-full px-3 py-2 border rounded"
+            className="input-base"
           />
         </div>
       </div>
 
-      <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Observaciones (opcional)
+      <div>
+        <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5" /> Observaciones <span className="font-normal text-slate-400">(opcional)</span>
         </label>
         <textarea
           value={formRemision.observaciones}
           onChange={(e) => setFormRemision({ ...formRemision, observaciones: e.target.value })}
-          className="w-full px-3 py-2 border rounded"
+          className="input-base resize-none"
           rows="2"
           placeholder="Notas adicionales sobre el despacho..."
         />
       </div>
 
-      <div className="mt-4">
+      <div>
         <button
           type="submit"
           disabled={!formRemision.orden_id || !formRemision.cantidad_despachada}
-          className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+          className="btn-primary gap-2"
         >
+          <Save className="w-4 h-4" />
           Crear Remisión
         </button>
       </div>

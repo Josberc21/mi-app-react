@@ -1,66 +1,98 @@
 // src/components/nomina/ResumenNomina.jsx
 import React from 'react';
-import { Download } from 'lucide-react';
+import { Download, Users, Settings, Package, DollarSign } from 'lucide-react';
 
-const ResumenNomina = ({ 
-  nominaFiltrada, 
-  filtroFechaInicio, 
+const ResumenNomina = ({
+  nominaFiltrada,
+  filtroFechaInicio,
   filtroFechaFin,
   onExportar,
-  children  // 👈 IMPORTANTE: Recibir children
+  children
 }) => {
   const totalGeneral = nominaFiltrada.reduce((sum, r) => sum + r.monto, 0);
   const totalOperaciones = nominaFiltrada.reduce((sum, e) => sum + e.operaciones, 0);
   const totalPiezas = nominaFiltrada.reduce((sum, e) => sum + e.piezas, 0);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      {/* Header con botón exportar */}
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold">Reporte de Nómina Detallado</h3>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onExportar}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 font-semibold transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Exportar a Excel
-          </button>
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Total General del Período</p>
-            <p className="text-3xl font-bold text-green-600">
-              ${totalGeneral.toLocaleString()}
-            </p>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base font-bold text-slate-900">Reporte de Nómina Detallado</h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {new Date(filtroFechaInicio).toLocaleDateString('es-CO')} al {new Date(filtroFechaFin).toLocaleDateString('es-CO')}
+          </p>
+        </div>
+        <button
+          onClick={onExportar}
+          className="btn-primary gap-2 self-start sm:self-auto"
+        >
+          <Download className="w-4 h-4" />
+          Exportar Excel
+        </button>
+      </div>
+
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <DollarSign className="w-4.5 h-4.5 text-brand-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-slate-500">Total a Pagar</p>
+              <p className="text-lg font-bold text-emerald-600 truncate">${totalGeneral.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Users className="w-4.5 h-4.5 text-slate-500" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Empleados</p>
+              <p className="text-lg font-bold text-slate-900">{nominaFiltrada.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Settings className="w-4.5 h-4.5 text-slate-500" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Operaciones</p>
+              <p className="text-lg font-bold text-slate-900">{totalOperaciones.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Package className="w-4.5 h-4.5 text-slate-500" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Piezas</p>
+              <p className="text-lg font-bold text-slate-900">{totalPiezas.toLocaleString()}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 👇 AQUÍ SE RENDERIZAN LAS TABLAS DE EMPLEADOS */}
+      {/* Employee detail tables */}
       {children}
 
-      {/* Total general final */}
-      <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-lg mt-6">
-        <div className="flex justify-between items-center">
+      {/* Footer total */}
+      <div className="card p-5 border-2 border-emerald-100 bg-emerald-50/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <p className="text-lg opacity-90 font-semibold">TOTAL GENERAL PERÍODO</p>
-            <p className="text-sm opacity-75">
-              Del {new Date(filtroFechaInicio).toLocaleDateString()} al {new Date(filtroFechaFin).toLocaleDateString()}
+            <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Total General del Período</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {nominaFiltrada.length} empleados · {totalOperaciones.toLocaleString()} operaciones · {totalPiezas.toLocaleString()} piezas
             </p>
-            <div className="mt-2 flex gap-4 text-sm">
-              <span className="bg-white bg-opacity-20 px-3 py-1 rounded">
-                {nominaFiltrada.length} empleados
-              </span>
-              <span className="bg-white bg-opacity-20 px-3 py-1 rounded">
-                {totalOperaciones} operaciones
-              </span>
-              <span className="bg-white bg-opacity-20 px-3 py-1 rounded">
-                {totalPiezas} piezas
-              </span>
-            </div>
           </div>
-          <p className="text-5xl font-bold">
-            ${totalGeneral.toLocaleString()}
-          </p>
+          <p className="text-4xl font-bold text-emerald-600">${totalGeneral.toLocaleString()}</p>
         </div>
       </div>
     </div>

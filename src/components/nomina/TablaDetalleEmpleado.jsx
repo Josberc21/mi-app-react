@@ -1,98 +1,82 @@
 // src/components/nomina/TablaDetalleEmpleado.jsx
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronRight, User } from 'lucide-react';
 
 const TablaDetalleEmpleado = ({ empleado, asignaciones, operaciones, prendas }) => {
   const [expandido, setExpandido] = useState(false);
 
   return (
-    <div className="mb-6 border rounded-lg overflow-hidden">
-      {/* Header del empleado - SIEMPRE VISIBLE y CLICKEABLE */}
-      <div 
-        className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-colors"
+    <div className="card overflow-hidden">
+      {/* Header */}
+      <div
+        className="px-4 py-3.5 cursor-pointer hover:bg-slate-50 transition-colors flex items-center justify-between gap-4"
         onClick={() => setExpandido(!expandido)}
       >
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            {/* Icono de expandir/colapsar */}
-            <button className="text-white hover:scale-110 transition-transform">
-              {expandido ? (
-                <ChevronUp className="w-6 h-6" />
-              ) : (
-                <ChevronDown className="w-6 h-6" />
-              )}
-            </button>
-            
-            <div>
-              <p className="text-sm opacity-90">Empleado ID: {empleado.id}</p>
-              <h4 className="text-2xl font-bold">{empleado.nombre}</h4>
-            </div>
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {expandido
+            ? <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            : <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+          <div className="w-8 h-8 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <span className="text-sm font-bold text-brand-600">{empleado.nombre.charAt(0)}</span>
           </div>
-          
-          <div className="text-right">
-            <p className="text-sm opacity-90">Total a Pagar</p>
-            <p className="text-3xl font-bold">${empleado.monto.toLocaleString()}</p>
+          <div className="min-w-0">
+            <h4 className="text-sm font-bold text-slate-900 truncate">{empleado.nombre}</h4>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {empleado.operaciones} ops · {empleado.piezas} piezas
+            </p>
           </div>
         </div>
-        
-        <div className="mt-2 flex gap-4 text-sm">
-          <span className="bg-white bg-opacity-20 px-3 py-1 rounded">
-            {empleado.operaciones} operaciones
-          </span>
-          <span className="bg-white bg-opacity-20 px-3 py-1 rounded">
-            {empleado.piezas} piezas totales
-          </span>
-          <span className="bg-white bg-opacity-30 px-3 py-1 rounded italic">
-            {expandido ? 'Click para ocultar detalle' : 'Click para ver detalle'}
-          </span>
+        <div className="text-right flex-shrink-0">
+          <p className="text-lg font-bold text-emerald-600">${empleado.monto.toLocaleString()}</p>
+          <p className="text-xs text-slate-400">total a pagar</p>
         </div>
       </div>
 
-      {/* Tabla de operaciones - COLAPSABLE */}
+      {/* Detail table */}
       {expandido && (
-        <div className="bg-white animate-slideDown">
+        <div className="border-t border-slate-100">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
+            <table className="table-base">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Fecha Asignada</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Fecha Terminada</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Prenda</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Operación</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Talla</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Cantidad</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Valor Unit.</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Subtotal</th>
+                  <th>Fecha Asignada</th>
+                  <th>Fecha Terminada</th>
+                  <th>Prenda</th>
+                  <th>Operación</th>
+                  <th>Talla</th>
+                  <th>Cantidad</th>
+                  <th>Valor Unit.</th>
+                  <th>Subtotal</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {asignaciones.map(a => {
                   const op = operaciones.find(o => o.id === a.operacion_id);
                   const prenda = prendas.find(p => p.id === a.prenda_id);
                   return (
-                    <tr key={a.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">{new Date(a.fecha).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-green-600">
-                        {a.fecha_terminado ? new Date(a.fecha_terminado).toLocaleDateString() : '-'}
+                    <tr key={a.id}>
+                      <td className="text-slate-500">{new Date(a.fecha).toLocaleDateString('es-CO')}</td>
+                      <td>
+                        {a.fecha_terminado
+                          ? <span className="text-emerald-600 font-medium">{new Date(a.fecha_terminado).toLocaleDateString('es-CO')}</span>
+                          : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-sm">{prenda?.referencia || '-'}</td>
-                      <td className="px-4 py-3 text-sm font-medium">{op?.nombre || '-'}</td>
-                      <td className="px-4 py-3 text-sm">{a.talla}</td>
-                      <td className="px-4 py-3 text-sm font-semibold">{a.cantidad}</td>
-                      <td className="px-4 py-3 text-sm">${op?.costo?.toLocaleString() || 0}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-green-600">
-                        ${parseFloat(a.monto || 0).toLocaleString()}
-                      </td>
+                      <td className="text-slate-600">{prenda?.referencia || '—'}</td>
+                      <td className="font-medium text-slate-800">{op?.nombre || '—'}</td>
+                      <td>{a.talla}</td>
+                      <td className="font-semibold">{a.cantidad}</td>
+                      <td className="text-slate-500">${op?.costo?.toLocaleString() || 0}</td>
+                      <td className="font-bold text-emerald-600">${parseFloat(a.monto || 0).toLocaleString()}</td>
                     </tr>
                   );
                 })}
               </tbody>
-              <tfoot className="bg-gray-50">
-                <tr>
-                  <td colSpan="7" className="px-4 py-3 text-right font-bold">
-                    TOTAL {empleado.nombre}:
+              <tfoot>
+                <tr className="bg-slate-50 border-t border-slate-200">
+                  <td colSpan="7" className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wide">
+                    Total {empleado.nombre}
                   </td>
-                  <td className="px-4 py-3 font-bold text-lg text-green-600">
+                  <td className="px-4 py-3 font-bold text-base text-emerald-600">
                     ${empleado.monto.toLocaleString()}
                   </td>
                 </tr>

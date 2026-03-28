@@ -1,184 +1,150 @@
 import React from 'react';
-import { formatearFecha, calcularDiasEntre } from '../../utils/dateUtils';
+import { formatearFecha } from '../../utils/dateUtils';
+import { BarChart2 } from 'lucide-react';
 
 const TablaTrazabilidad = ({ ordenes, prendas, remisiones, calcularProgresoOrden, asignaciones }) => {
-  
-  // Función para calcular el tiempo real de producción
+
   const calcularTiempoProduccion = (orden) => {
-    const asignacionesOrden = asignaciones.filter(a => 
+    const asignacionesOrden = asignaciones.filter(a =>
       a.orden_id === orden.id && a.completado && a.fecha_terminado
     );
-
-    if (asignacionesOrden.length === 0) {
-      return null;
-    }
-
+    if (asignacionesOrden.length === 0) return null;
     const fechasTerminadas = asignacionesOrden.map(a => new Date(a.fecha_terminado));
     const fechaUltimaTerminacion = new Date(Math.max(...fechasTerminadas));
     const fechaEntrada = new Date(orden.fecha_entrada);
-    
     const diffMs = fechaUltimaTerminacion - fechaEntrada;
-    
     const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
     return { dias, horas, minutos, totalDias: dias };
   };
 
+  const despachadas = ordenes.filter(o => {
+    const total = remisiones.filter(r => r.orden_id === o.id).reduce((s, r) => s + r.cantidad_despachada, 0);
+    return total >= o.cantidad_total;
+  }).length;
+
+  const listasDespacho = ordenes.filter(o => {
+    const prog = calcularProgresoOrden(o);
+    const total = remisiones.filter(r => r.orden_id === o.id).reduce((s, r) => s + r.cantidad_despachada, 0);
+    return prog.completadas >= o.cantidad_total && total < o.cantidad_total;
+  }).length;
+
+  const enProduccion = ordenes.filter(o => {
+    const prog = calcularProgresoOrden(o);
+    const total = remisiones.filter(r => r.orden_id === o.id).reduce((s, r) => s + r.cantidad_despachada, 0);
+    return prog.completadas < o.cantidad_total && total < o.cantidad_total;
+  }).length;
+
   return (
-    <div className="bg-white rounded-lg shadow p-6 mt-6">
-      <h2 className="text-xl font-bold mb-4">📊 Trazabilidad Completa de Órdenes</h2>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left">Orden</th>
-              <th className="px-4 py-3 text-left">Prenda</th>
-              <th className="px-4 py-3 text-left">Cantidad</th>
-              <th className="px-4 py-3 text-left">Fecha Entrada</th>
-              <th className="px-4 py-3 text-left">Progreso</th>
-              <th className="px-4 py-3 text-left">Despachadas</th>
-              <th className="px-4 py-3 text-left">Tiempo de Producción</th>
-              <th className="px-4 py-3 text-left">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ordenes.map(orden => {
-              const prenda = prendas.find(p => p.id === orden.prenda_id);
-              const progreso = calcularProgresoOrden(orden);
-              const totalDespachado = remisiones
-                .filter(r => r.orden_id === orden.id)
-                .reduce((sum, r) => sum + r.cantidad_despachada, 0);
-
-              const tiempo = calcularTiempoProduccion(orden);
-
-              let estado = 'En Producción';
-              let colorEstado = 'bg-blue-100 text-blue-800';
-
-              if (totalDespachado >= orden.cantidad_total) {
-                estado = 'Despachada';
-                colorEstado = 'bg-green-100 text-green-800';
-              } else if (progreso.completadas >= orden.cantidad_total) {
-                estado = 'Lista para Despacho';
-                colorEstado = 'bg-purple-100 text-purple-800';
-              } else if (progreso.porcentaje === 0) {
-                estado = 'Sin Iniciar';
-                colorEstado = 'bg-gray-100 text-gray-800';
-              }
-
-              return (
-                <tr key={orden.id} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-3 font-semibold">{orden.numero_orden}</td>
-                  <td className="px-4 py-3">
-                    <div>{prenda?.referencia}</div>
-                    <div className="text-xs text-gray-500">{orden.color} - {orden.talla}</div>
-                  </td>
-                  <td className="px-4 py-3 font-bold">{orden.cantidad_total}</td>
-                  <td className="px-4 py-3">
-                    {formatearFecha(orden.fecha_entrada)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-500 h-2 rounded-full transition-all"
-                          style={{ width: `${progreso.porcentaje}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-semibold">{progreso.porcentaje}%</span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {progreso.completadas} / {orden.cantidad_total} completas
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="font-bold text-green-600">{totalDespachado}</span>
-                    {totalDespachado > 0 && (
-                      <div className="text-xs text-gray-500">
-                        {Math.round((totalDespachado / orden.cantidad_total) * 100)}% despachado
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {(() => {
-                      if (!tiempo) {
-                        return (
-                          <span className="px-3 py-1 rounded font-semibold bg-gray-100 text-gray-600">
-                            Sin iniciar
-                          </span>
-                        );
-                      }
-                      
-                      const textoTiempo = [
-                        tiempo.dias > 0 ? `${tiempo.dias}d` : '',
-                        `${tiempo.horas}h`,
-                        tiempo.minutos > 0 ? `${tiempo.minutos}m` : ''
-                      ].filter(Boolean).join(' ');
-
-                      return (
-                        <span className={`px-3 py-1 rounded font-semibold ${
-                          tiempo.totalDias > 15 ? 'bg-red-100 text-red-800' :
-                          tiempo.totalDias > 10 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {textoTiempo}
-                        </span>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-3 py-1 rounded text-xs font-semibold ${colorEstado}`}>
-                      {estado}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="card p-4">
+          <p className="text-xs text-slate-500">Total Órdenes</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{ordenes.length}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-slate-500">Despachadas</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{despachadas}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-slate-500">Listas para Despacho</p>
+          <p className="text-2xl font-bold text-violet-600 mt-1">{listasDespacho}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-slate-500">En Producción</p>
+          <p className="text-2xl font-bold text-brand-600 mt-1">{enProduccion}</p>
+        </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gray-50 p-4 rounded">
-          <p className="text-sm text-gray-600">Total Órdenes</p>
-          <p className="text-2xl font-bold">{ordenes.length}</p>
+      {/* Table */}
+      <div className="card overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+          <BarChart2 className="w-4 h-4 text-brand-500" />
+          <h2 className="text-sm font-bold text-slate-900">Trazabilidad Completa de Órdenes</h2>
         </div>
-        <div className="bg-green-50 p-4 rounded">
-          <p className="text-sm text-gray-600">Completamente Despachadas</p>
-          <p className="text-2xl font-bold text-green-600">
-            {ordenes.filter(o => {
-              const totalDesp = remisiones
-                .filter(r => r.orden_id === o.id)
-                .reduce((sum, r) => sum + r.cantidad_despachada, 0);
-              return totalDesp >= o.cantidad_total;
-            }).length}
-          </p>
-        </div>
-        <div className="bg-purple-50 p-4 rounded">
-          <p className="text-sm text-gray-600">Listas para Despacho</p>
-          <p className="text-2xl font-bold text-purple-600">
-            {ordenes.filter(o => {
-              const prog = calcularProgresoOrden(o);
-              const totalDesp = remisiones
-                .filter(r => r.orden_id === o.id)
-                .reduce((sum, r) => sum + r.cantidad_despachada, 0);
-              return prog.completadas >= o.cantidad_total && totalDesp < o.cantidad_total;
-            }).length}
-          </p>
-        </div>
-        <div className="bg-blue-50 p-4 rounded">
-          <p className="text-sm text-gray-600">En Producción</p>
-          <p className="text-2xl font-bold text-blue-600">
-            {ordenes.filter(o => {
-              const prog = calcularProgresoOrden(o);
-              const totalDesp = remisiones
-                .filter(r => r.orden_id === o.id)
-                .reduce((sum, r) => sum + r.cantidad_despachada, 0);
-              return prog.completadas < o.cantidad_total && totalDesp < o.cantidad_total;
-            }).length}
-          </p>
+        <div className="overflow-x-auto">
+          <table className="table-base">
+            <thead>
+              <tr>
+                <th>Orden</th>
+                <th>Prenda</th>
+                <th>Cantidad</th>
+                <th>Fecha Entrada</th>
+                <th>Progreso</th>
+                <th>Despachadas</th>
+                <th>Tiempo Producción</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ordenes.map(orden => {
+                const prenda = prendas.find(p => p.id === orden.prenda_id);
+                const progreso = calcularProgresoOrden(orden);
+                const totalDespachado = remisiones
+                  .filter(r => r.orden_id === orden.id)
+                  .reduce((sum, r) => sum + r.cantidad_despachada, 0);
+                const tiempo = calcularTiempoProduccion(orden);
+
+                let estadoLabel = 'En Producción';
+                let estadoCls = 'badge-blue';
+                if (totalDespachado >= orden.cantidad_total) {
+                  estadoLabel = 'Despachada'; estadoCls = 'badge-green';
+                } else if (progreso.completadas >= orden.cantidad_total) {
+                  estadoLabel = 'Lista Despacho'; estadoCls = 'badge';
+                } else if (progreso.porcentaje === 0) {
+                  estadoLabel = 'Sin Iniciar'; estadoCls = 'badge-slate';
+                }
+
+                const tiempoCls = !tiempo ? 'badge-slate'
+                  : tiempo.totalDias > 15 ? 'badge-red'
+                  : tiempo.totalDias > 10 ? 'badge-amber'
+                  : 'badge-green';
+
+                const tiempoTexto = !tiempo ? 'Sin iniciar'
+                  : [
+                      tiempo.dias > 0 ? `${tiempo.dias}d` : '',
+                      `${tiempo.horas}h`,
+                      tiempo.minutos > 0 ? `${tiempo.minutos}m` : ''
+                    ].filter(Boolean).join(' ');
+
+                return (
+                  <tr key={orden.id}>
+                    <td className="font-bold text-slate-900">{orden.numero_orden}</td>
+                    <td>
+                      <p className="font-medium text-slate-800">{prenda?.referencia}</p>
+                      <p className="text-xs text-slate-400">{orden.color} · T{orden.talla}</p>
+                    </td>
+                    <td className="font-bold">{orden.cantidad_total}</td>
+                    <td className="text-slate-500 text-xs">{formatearFecha(orden.fecha_entrada)}</td>
+                    <td>
+                      <div className="flex items-center gap-2 min-w-[100px]">
+                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-brand-500 rounded-full transition-all"
+                            style={{ width: `${progreso.porcentaje}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-600 flex-shrink-0">{progreso.porcentaje}%</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">{progreso.completadas}/{orden.cantidad_total}</p>
+                    </td>
+                    <td>
+                      <span className="font-bold text-emerald-600">{totalDespachado}</span>
+                      {totalDespachado > 0 && (
+                        <p className="text-xs text-slate-400">
+                          {Math.round((totalDespachado / orden.cantidad_total) * 100)}%
+                        </p>
+                      )}
+                    </td>
+                    <td><span className={`badge ${tiempoCls}`}>{tiempoTexto}</span></td>
+                    <td><span className={`badge ${estadoCls}`}>{estadoLabel}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
