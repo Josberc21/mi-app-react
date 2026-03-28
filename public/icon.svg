@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#4f46e5"/>
+  <!-- Scissors icon (Lucide-style) -->
+  <!-- Circle handles -->
+  <circle cx="152" cy="168" r="52" fill="none" stroke="white" stroke-width="36" stroke-linecap="round"/>
+  <circle cx="152" cy="344" r="52" fill="none" stroke="white" stroke-width="36" stroke-linecap="round"/>
+  <!-- Blades -->
+  <line x1="192" y1="192" x2="388" y2="388" stroke="white" stroke-width="36" stroke-linecap="round"/>
+  <line x1="388" y1="124" x2="192" y2="320" stroke="white" stroke-width="36" stroke-linecap="round"/>
+</svg>
