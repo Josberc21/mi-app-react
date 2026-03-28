@@ -1,150 +1,144 @@
-// src/components/dashboard/PanelCuellosBottella.jsx
 import React from 'react';
-import { Zap, TrendingDown, Award, Info } from 'lucide-react';
+import { Zap, TrendingDown, Award, Lightbulb, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 const PanelCuellosBottella = ({ analisis }) => {
   return (
-    <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
-      <div className="flex items-center gap-3 mb-6">
-        <Zap className="w-8 h-8" />
-        <h2 className="text-2xl font-bold">Análisis de Eficiencia del Taller</h2>
+    <div className="card overflow-hidden">
+      {/* Header oscuro */}
+      <div className="bg-sidebar-bg px-6 py-5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-brand-600/20 border border-brand-600/30 rounded-xl flex items-center justify-center">
+            <Zap className="w-4 h-4 text-brand-400" />
+          </div>
+          <div>
+            <h2 className="text-white font-semibold text-sm">Análisis de Eficiencia</h2>
+            <p className="text-slate-500 text-xs mt-0.5">Cuellos de botella y productividad</p>
+          </div>
+        </div>
+        {/* Stats resumen */}
+        {analisis.estadisticas && (
+          <div className="hidden sm:flex items-center gap-4">
+            <div className="text-center">
+              <p className="text-emerald-400 text-lg font-bold">{analisis.estadisticas.operacionesAltas}</p>
+              <p className="text-slate-500 text-xs">Alta ef.</p>
+            </div>
+            <div className="text-center">
+              <p className="text-amber-400 text-lg font-bold">{analisis.estadisticas.operacionesMedias}</p>
+              <p className="text-slate-500 text-xs">Media ef.</p>
+            </div>
+            <div className="text-center">
+              <p className="text-rose-400 text-lg font-bold">{analisis.estadisticas.operacionesBajas}</p>
+              <p className="text-slate-500 text-xs">Baja ef.</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 🆕 INFORMACIÓN DE DEBUG */}
-      {analisis.estadisticas && (
-        <div className="mb-4 bg-white bg-opacity-10 rounded-lg p-3 text-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <Info className="w-4 h-4" />
-            <span className="font-semibold">Estado del análisis:</span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-            <div>
-              <span className="opacity-75">Operaciones analizadas:</span>
-              <span className="font-bold ml-2">{analisis.estadisticas.totalOperacionesAnalizadas}</span>
-            </div>
-            <div>
-              <span className="opacity-75">Alta eficiencia:</span>
-              <span className="font-bold ml-2 text-green-300">{analisis.estadisticas.operacionesAltas}</span>
-            </div>
-            <div>
-              <span className="opacity-75">Media eficiencia:</span>
-              <span className="font-bold ml-2 text-yellow-300">{analisis.estadisticas.operacionesMedias}</span>
-            </div>
-            <div>
-              <span className="opacity-75">Baja eficiencia:</span>
-              <span className="font-bold ml-2 text-red-300">{analisis.estadisticas.operacionesBajas}</span>
-            </div>
-          </div>
-          <p className="mt-2 text-xs opacity-75">
-            Asignaciones con fecha de terminación: {analisis.estadisticas.asignacionesConFechaTerminado} de {analisis.estadisticas.asignacionesCompletadasTotal}
-          </p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* OPERACIONES LENTAS */}
-        <div className="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingDown className="w-5 h-5" />
-            <h3 className="font-bold">Cuellos de Botella</h3>
+      {/* Contenido */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+        {/* Cuellos de botella */}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingDown className="w-4 h-4 text-rose-500" />
+            <h3 className="text-sm font-semibold text-slate-800">Cuellos de Botella</h3>
           </div>
           {analisis.operacionesLentas.length > 0 ? (
             <div className="space-y-2">
               {analisis.operacionesLentas.map((op, idx) => (
-                <div key={idx} className="bg-white bg-opacity-20 rounded p-2">
-                  <p className="font-semibold text-sm">{op.operacion}</p>
-                  <p className="text-xs opacity-90">
-                    {op.tiempoPromedio} días/pieza • {op.totalCompletadas} piezas
-                  </p>
+                <div key={idx} className="flex items-start gap-2 px-3 py-2.5 bg-rose-50 border border-rose-100 rounded-xl">
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500 flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-rose-900 truncate">{op.operacion}</p>
+                    <p className="text-xs text-rose-600 mt-0.5">
+                      {op.tiempoPromedio} días/pz · {op.totalCompletadas} pzs
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div>
-              <p className="text-sm opacity-75 mb-2">✓ No hay operaciones lentas detectadas</p>
-              {analisis.eficienciaOperaciones && analisis.eficienciaOperaciones.length > 0 ? (
-                <div className="text-xs opacity-60 mt-2 p-2 bg-white bg-opacity-10 rounded">
-                  <p className="font-semibold mb-1">Operaciones más lentas (aún eficientes):</p>
+            <div className="flex flex-col items-center py-4 text-center">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
+              <p className="text-sm text-slate-600 font-medium">Sin cuellos de botella</p>
+              {analisis.eficienciaOperaciones?.length > 0 && (
+                <div className="mt-3 w-full space-y-1.5">
                   {analisis.eficienciaOperaciones
                     .sort((a, b) => parseFloat(b.tiempoPromedio) - parseFloat(a.tiempoPromedio))
                     .slice(0, 3)
                     .map((op, idx) => (
-                      <div key={idx} className="flex justify-between mt-1">
-                        <span>{op.operacion}</span>
-                        <span className="font-mono">{op.tiempoPromedio} d/pz</span>
+                      <div key={idx} className="flex justify-between text-xs px-2 py-1.5 bg-slate-50 rounded-lg">
+                        <span className="text-slate-600 truncate mr-2">{op.operacion}</span>
+                        <span className="text-slate-400 font-mono flex-shrink-0">{op.tiempoPromedio}d/pz</span>
                       </div>
                     ))}
                 </div>
-              ) : (
-                <p className="text-xs opacity-60 italic">
-                  No hay suficientes datos históricos para analizar
-                </p>
               )}
             </div>
           )}
         </div>
 
-        {/* TOP EMPLEADOS PRODUCTIVOS */}
-        <div className="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Award className="w-5 h-5" />
-            <h3 className="font-bold">Top Productividad (7 días)</h3>
+        {/* Top productividad */}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Award className="w-4 h-4 text-amber-500" />
+            <h3 className="text-sm font-semibold text-slate-800">Top Productividad (7 días)</h3>
           </div>
           {analisis.productividadEmpleados.length > 0 ? (
             <div className="space-y-2">
-              {analisis.productividadEmpleados.map((emp, idx) => (
-                <div key={idx} className="bg-white bg-opacity-20 rounded p-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-sm">
-                      {idx === 0 && '🏆 '}
-                      {idx === 1 && '🥈 '}
-                      {idx === 2 && '🥉 '}
-                      {emp.nombre}
-                    </span>
-                    <span className="text-lg font-bold">{emp.piezas}</span>
+              {analisis.productividadEmpleados.map((emp, idx) => {
+                const medals = ['🥇', '🥈', '🥉'];
+                return (
+                  <div key={idx} className="flex items-center gap-3 px-3 py-2.5 bg-slate-50 rounded-xl">
+                    <span className="text-base flex-shrink-0">{medals[idx] || `${idx + 1}.`}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{emp.nombre}</p>
+                      <p className="text-xs text-slate-400">{emp.piezas} piezas completadas</p>
+                    </div>
+                    <span className="text-sm font-bold text-brand-600 flex-shrink-0">{emp.piezas}</span>
                   </div>
-                  <p className="text-xs opacity-90">piezas completadas</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <p className="text-sm opacity-75">Sin datos completados en los últimos 7 días</p>
+            <p className="text-sm text-slate-400 text-center py-6">Sin datos en los últimos 7 días</p>
           )}
         </div>
 
-        {/* RECOMENDACIONES */}
-        <div className="bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
-          <h3 className="font-bold mb-3">💡 Recomendaciones</h3>
-          <div className="space-y-3 text-sm">
+        {/* Recomendaciones */}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Lightbulb className="w-4 h-4 text-brand-500" />
+            <h3 className="text-sm font-semibold text-slate-800">Recomendaciones</h3>
+          </div>
+          <div className="space-y-2.5">
             {analisis.operacionesLentas.length > 0 && (
-              <div className="bg-red-500 bg-opacity-20 rounded p-2">
-                <p className="font-semibold">⚠️ Acción Urgente</p>
-                <p className="opacity-90 mt-1">
-                  {analisis.operacionesLentas.length} operación(es) causando retrasos. 
-                  Considera capacitación o redistribución.
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-rose-50 border border-rose-100 rounded-xl">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-rose-700 leading-snug">
+                  <span className="font-semibold">Acción urgente:</span>{' '}
+                  {analisis.operacionesLentas.length} operación(es) con retrasos. Considera capacitación o redistribución.
                 </p>
               </div>
             )}
             {analisis.productividadEmpleados.length > 0 && (
-              <div className="bg-green-500 bg-opacity-20 rounded p-2">
-                <p className="font-semibold">✓ Optimización</p>
-                <p className="opacity-90 mt-1">
-                  {analisis.productividadEmpleados[0].nombre} es tu empleado más productivo. 
-                  Considera replicar su metodología.
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-100 rounded-xl">
+                <Award className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-emerald-700 leading-snug">
+                  <span className="font-semibold">{analisis.productividadEmpleados[0].nombre}</span> es tu empleado más productivo. Replica su metodología.
                 </p>
               </div>
             )}
-            {analisis.operacionesLentas.length === 0 && analisis.eficienciaOperaciones.length > 0 && (
-              <div className="bg-blue-500 bg-opacity-20 rounded p-2">
-                <p className="font-semibold">✓ Excelente Desempeño</p>
-                <p className="opacity-90 mt-1">
-                  Todas las operaciones están dentro de parámetros eficientes. ¡Buen trabajo!
+            {analisis.operacionesLentas.length === 0 && analisis.eficienciaOperaciones?.length > 0 && (
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-brand-50 border border-brand-100 rounded-xl">
+                <CheckCircle2 className="w-3.5 h-3.5 text-brand-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-brand-700 leading-snug">
+                  Todas las operaciones están dentro de parámetros eficientes.
                 </p>
               </div>
             )}
-            <div className="bg-blue-500 bg-opacity-20 rounded p-2">
-              <p className="font-semibold">📊 Balance</p>
-              <p className="opacity-90 mt-1">
+            <div className="flex items-start gap-2 px-3 py-2.5 bg-slate-50 border border-slate-100 rounded-xl">
+              <Zap className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-600 leading-snug">
                 Monitorea diariamente para mantener flujo constante en todas las operaciones.
               </p>
             </div>

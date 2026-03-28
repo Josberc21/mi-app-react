@@ -1,15 +1,15 @@
 // src/components/operaciones/FormularioOperacion.jsx
 import React from 'react';
-import { Settings, DollarSign, Package } from 'lucide-react';
+import { Settings, DollarSign, Package, Save, Loader2 } from 'lucide-react';
 
-const FormularioOperacion = ({ 
-  formData, 
+const FormularioOperacion = ({
+  formData,
   prendas = [],
-  onChange, 
-  onSubmit, 
+  onChange,
+  onSubmit,
   onCancelar,
   editando = false,
-  loading = false 
+  loading = false
 }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -17,39 +17,33 @@ const FormularioOperacion = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-gray-50 p-4 rounded-lg mb-6">
-      <h3 className="font-semibold text-lg mb-4">
-        {editando ? 'Editar Operación' : 'Nueva Operación'}
-      </h3>
-      
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Settings className="w-4 h-4 inline mr-1" />
-            Nombre Operación *
+          <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+            <Settings className="w-3.5 h-3.5" /> Nombre Operación *
           </label>
           <input
             type="text"
             name="nombre"
             value={formData.nombre}
             onChange={onChange}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
+            className="input-base uppercase"
             placeholder="Ej: CERRAR HOMBROS"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <DollarSign className="w-4 h-4 inline mr-1" />
-            Costo *
+          <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+            <DollarSign className="w-3.5 h-3.5" /> Costo *
           </label>
           <input
             type="number"
             name="costo"
             value={formData.costo}
             onChange={onChange}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="input-base"
             placeholder="150"
             min="0"
             step="0.01"
@@ -58,41 +52,30 @@ const FormularioOperacion = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Package className="w-4 h-4 inline mr-1" />
-            Prenda *
+          <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
+            <Package className="w-3.5 h-3.5" /> Prenda *
           </label>
           <select
             name="prenda_id"
             value={formData.prenda_id}
             onChange={onChange}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="input-base"
             required
           >
             <option value="">Seleccionar prenda</option>
             {prendas.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.referencia}
-              </option>
+              <option key={p.id} value={p.id}>{p.referencia}</option>
             ))}
           </select>
         </div>
 
         <div className="flex items-end gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
-          >
+          <button type="submit" disabled={loading} className="btn-primary flex-1 gap-2">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {loading ? 'Guardando...' : editando ? 'Actualizar' : 'Agregar'}
           </button>
-          
           {editando && (
-            <button
-              type="button"
-              onClick={onCancelar}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-            >
+            <button type="button" onClick={onCancelar} className="btn-secondary">
               Cancelar
             </button>
           )}

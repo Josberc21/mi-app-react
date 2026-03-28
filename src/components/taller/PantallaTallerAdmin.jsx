@@ -407,562 +407,330 @@ const PantallaTallerAdmin = ({
 
   // ========== RENDER ==========
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* HEADER */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 shadow-lg">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold">🎯 Torre de Control - Taller</h1>
-              <p className="text-blue-100 mt-2">
-                {new Date().toLocaleDateString('es-CO', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </p>
+    <div className="space-y-6 animate-slide-up">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Torre de Control — Taller</h1>
+          <p className="text-slate-500 text-sm mt-0.5 capitalize">
+            {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse inline-block" />
+          <span className="font-mono">{new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+          <span className="text-slate-300">· auto 30s</span>
+        </div>
+      </div>
+
+      {/* MÉTRICAS HERO */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Meta del día */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-9 h-9 bg-brand-50 rounded-xl flex items-center justify-center">
+              <Target className="w-4 h-4 text-brand-600" />
             </div>
-            <div className="text-right">
-              <div className="flex items-center gap-2 justify-end">
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-xl font-mono font-bold">
-                  {new Date().toLocaleTimeString('es-CO', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
+            <span className={`text-2xl font-bold ${metaDiaria.progreso >= 100 ? 'text-emerald-600' : metaDiaria.progreso >= 50 ? 'text-brand-600' : 'text-amber-600'}`}>
+              {metaDiaria.progreso.toFixed(0)}%
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Meta del Día</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{metaDiaria.completadas}/{metaDiaria.meta}</p>
+          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all duration-500 ${metaDiaria.progreso >= 100 ? 'bg-emerald-500' : metaDiaria.progreso >= 50 ? 'bg-brand-500' : 'bg-amber-500'}`}
+              style={{ width: `${Math.min(metaDiaria.progreso, 100)}%` }} />
+          </div>
+          <p className="text-xs text-slate-400 mt-2">Pendientes: {metaDiaria.pendientes} ops</p>
+        </div>
+
+        {/* Velocidad */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center">
+              <Zap className="w-4 h-4 text-emerald-600" />
+            </div>
+            <Activity className="w-4 h-4 text-slate-300" />
+          </div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Velocidad</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{velocidad.prendasPorHora} <span className="text-sm font-normal text-slate-400">ops/h</span></p>
+          <p className="text-xs text-slate-500 mt-2">
+            Proyección: <span className={`font-semibold ${velocidad.alcanzaraMeta ? 'text-emerald-600' : 'text-amber-600'}`}>{velocidad.proyeccion} ops</span>
+          </p>
+        </div>
+
+        {/* Operarios */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center">
+              <Users className="w-4 h-4 text-purple-600" />
+            </div>
+            <span className="text-2xl font-bold text-purple-600">{metricasGlobales.operariosActivos}</span>
+          </div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Operarios Activos</p>
+          <p className="text-lg font-semibold text-slate-700 mt-1">{metricasGlobales.operariosDisponibles} disponibles</p>
+          <p className="text-xs text-slate-400 mt-2">{metricasGlobales.operariosQueTrabajaronHoy} trabajaron hoy</p>
+        </div>
+
+        {/* Producción monetaria */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center">
+              <Package className="w-4 h-4 text-amber-600" />
+            </div>
+            <TrendingUp className="w-4 h-4 text-emerald-500" />
+          </div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Producción Hoy</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">${metricasGlobales.totalMontoHoy.toLocaleString()}</p>
+          <p className="text-xs text-slate-400 mt-2">Promedio: {metricasGlobales.eficienciaPromedio} ops/operario</p>
+        </div>
+      </div>
+
+      {/* ALERTAS CRÍTICAS */}
+      {alertasCriticas.length > 0 && (
+        <div className="card overflow-hidden">
+          <button onClick={() => toggleSeccion('alertas')} className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-500 animate-pulse" />
+              <h2 className="text-sm font-semibold text-slate-800">Alertas Críticas</h2>
+              <span className="badge-red">{alertasCriticas.length}</span>
+            </div>
+            {seccionesAbiertas.alertas ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+          {seccionesAbiertas.alertas && (
+            <div className="px-5 pb-5 border-t border-slate-100 pt-4 space-y-2.5">
+              {alertasCriticas.map((alerta, idx) => {
+                const configs = {
+                  critico:  { bg: 'bg-rose-50',   border: 'border-rose-200',   bar: 'bg-rose-500',   title: 'text-rose-900',   msg: 'text-rose-700'   },
+                  urgente:  { bg: 'bg-orange-50',  border: 'border-orange-200', bar: 'bg-orange-500', title: 'text-orange-900', msg: 'text-orange-700' },
+                  atencion: { bg: 'bg-amber-50',   border: 'border-amber-200',  bar: 'bg-amber-500',  title: 'text-amber-900',  msg: 'text-amber-700'  }
+                };
+                const c = configs[alerta.nivel] || configs.atencion;
+                return (
+                  <div key={idx} className={`relative flex items-start gap-3 px-4 py-3 rounded-xl border overflow-hidden ${c.bg} ${c.border}`}>
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${c.bar}`} />
+                    <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${c.bar.replace('bg-', 'text-')}`} />
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold ${c.title}`}>{alerta.mensaje}</p>
+                      <p className={`text-xs mt-0.5 ${c.msg}`}>{alerta.tipo.replace('_', ' ')}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TABLA DE OPERARIOS EN LÍNEA */}
+      <div className="card overflow-hidden">
+        <button onClick={() => toggleSeccion('operarios')} className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors">
+          <div className="flex items-center gap-2.5">
+            <Users className="w-4 h-4 text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-800">Operarios en Línea</h2>
+            <span className="badge-slate">{operariosFiltrados.length}</span>
+          </div>
+          {seccionesAbiertas.operarios ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </button>
+
+        {seccionesAbiertas.operarios && (
+          <>
+            {/* Filtros */}
+            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50">
+              <div className="flex items-center gap-1 flex-wrap">
+                <button onClick={() => setFiltroOperarios('hoy')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroOperarios === 'hoy' ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}>
+                  Hoy ({contadores.hoy})
+                </button>
+                <button onClick={() => setFiltroOperarios('atrasados')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroOperarios === 'atrasados' ? 'bg-rose-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}>
+                  +1 día ({contadores.atrasados})
+                </button>
+                <button onClick={() => setFiltroOperarios('disponibles')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroOperarios === 'disponibles' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}>
+                  Disponibles ({contadores.disponibles})
+                </button>
+                <button onClick={() => setFiltroOperarios('todos')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroOperarios === 'todos' ? 'bg-slate-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}>
+                  Todos
+                </button>
+              </div>
+            </div>
+
+            {/* Tabla */}
+            <div className="overflow-x-auto">
+              <table className="table-base">
+                <thead>
+                  <tr>
+                    <th>Operario</th>
+                    <th>Operación Actual</th>
+                    <th>Avance</th>
+                    <th className="cursor-pointer hover:bg-slate-100"
+                      onClick={() => setOrdenOperarios(prev => ({ campo: 'tiempoEnOperacion', direccion: prev.campo === 'tiempoEnOperacion' && prev.direccion === 'asc' ? 'desc' : 'asc' }))}>
+                      <div className="flex items-center gap-1">
+                        Tiempo <ArrowUpDown className="w-3 h-3" />
+                        {ordenOperarios.campo === 'tiempoEnOperacion' && <span>{ordenOperarios.direccion === 'asc' ? '↑' : '↓'}</span>}
+                      </div>
+                    </th>
+                    <th>Pendientes</th>
+                    <th>Completadas hoy</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {operariosOrdenados.map(op => {
+                    const estadoConfig = {
+                      atascado:   { leftBorder: 'border-l-4 border-rose-500',    badgeCls: 'badge-red',   texto: 'Atascado'   },
+                      trabajando: { leftBorder: 'border-l-4 border-emerald-500', badgeCls: 'badge-green', texto: 'Trabajando' },
+                      finalizando:{ leftBorder: 'border-l-4 border-amber-400',   badgeCls: 'badge-amber', texto: 'Finalizando'},
+                      disponible: { leftBorder: 'border-l-4 border-slate-200',   badgeCls: 'badge-slate', texto: 'Disponible' }
+                    };
+                    const config = estadoConfig[op.estado] || estadoConfig.disponible;
+
+                    return (
+                      <tr key={op.id} className={config.leftBorder}>
+                        <td>
+                          <div>
+                            <p className="font-semibold text-slate-900">{op.nombre}</p>
+                            <p className="text-xs text-slate-400">ID: {op.id}</p>
+                          </div>
+                        </td>
+                        <td className="font-medium text-slate-700">{op.operacionActual || '—'}</td>
+                        <td className="font-mono font-semibold text-slate-800">{op.avance || '—'}</td>
+                        <td className="text-slate-600">{op.tiempoEnOperacion || '—'}</td>
+                        <td className="font-bold text-slate-900">{op.totalPendientes}</td>
+                        <td className="font-bold text-emerald-600">{op.totalCompletadas}</td>
+                        <td><span className={`badge ${config.badgeCls}`}>{config.texto}</span></td>
+                      </tr>
+                    );
                   })}
-                </span>
-              </div>
-              <p className="text-xs text-blue-200 mt-1">Actualización automática cada 30s</p>
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
+          </>
+        )}
+      </div>
 
-        {/* PANEL DE MÉTRICAS HERO */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Meta del día */}
-          <div className="bg-white rounded-lg p-6 shadow-md border-l-4 border-blue-500">
-            <div className="flex items-center justify-between mb-2">
-              <Target className="w-8 h-8 text-blue-500" />
-              <span className={`text-3xl font-bold ${metaDiaria.progreso >= 100 ? 'text-green-600' :
-                metaDiaria.progreso >= 50 ? 'text-blue-600' : 'text-amber-600'
-                }`}>
-                {metaDiaria.progreso.toFixed(0)}%
-              </span>
+      {/* ÓRDENES CRÍTICAS */}
+      {ordenesCriticas.length > 0 && (
+        <div className="card overflow-hidden">
+          <button onClick={() => toggleSeccion('ordenes')} className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-500 animate-pulse" />
+              <h2 className="text-sm font-semibold text-slate-800">Órdenes Críticas</h2>
+              <span className="badge-red">{ordenesCriticas.length}</span>
             </div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase">Meta del Día</h3>
-            <p className="text-2xl font-bold text-gray-900 mt-1">
-              {metaDiaria.completadas}/{metaDiaria.meta}
-            </p>
-            <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 ${metaDiaria.progreso >= 100 ? 'bg-green-500' :
-                  metaDiaria.progreso >= 50 ? 'bg-blue-500' : 'bg-amber-500'
-                  }`}
-                style={{ width: `${Math.min(metaDiaria.progreso, 100)}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Pendientes: {metaDiaria.pendientes} ops
-            </p>
-          </div>
-
-          {/* Velocidad */}
-          <div className="bg-white rounded-lg p-6 shadow-md border-l-4 border-green-500">
-            <div className="flex items-center justify-between mb-2">
-              <Zap className="w-8 h-8 text-green-500" />
-              <Activity className="w-6 h-6 text-gray-400" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase">Velocidad</h3>
-            <p className="text-2xl font-bold text-gray-900 mt-1">
-              {velocidad.prendasPorHora} <span className="text-lg text-gray-500">ops/h</span>
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              Proyección: <span className={`font-bold ${velocidad.alcanzaraMeta ? 'text-green-600' : 'text-amber-600'}`}>
-                {velocidad.proyeccion} ops
-              </span>
-            </p>
-          </div>
-
-          {/* Operarios */}
-          <div className="bg-white rounded-lg p-6 shadow-md border-l-4 border-purple-500">
-            <div className="flex items-center justify-between mb-2">
-              <Users className="w-8 h-8 text-purple-500" />
-              <span className="text-3xl font-bold text-purple-600">
-                {metricasGlobales.operariosActivos}
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase">Operarios Activos</h3>
-            <p className="text-lg text-gray-700 mt-1">
-              {metricasGlobales.operariosDisponibles} disponibles
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              {metricasGlobales.operariosQueTrabajaronHoy} trabajaron hoy
-            </p>
-          </div>
-
-          {/* Producción monetaria */}
-          <div className="bg-white rounded-lg p-6 shadow-md border-l-4 border-amber-500">
-            <div className="flex items-center justify-between mb-2">
-              <Package className="w-8 h-8 text-amber-500" />
-              <TrendingUp className="w-6 h-6 text-green-500" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase">Producción Hoy</h3>
-            <p className="text-2xl font-bold text-gray-900 mt-1">
-              ${metricasGlobales.totalMontoHoy.toLocaleString()}
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              Promedio: {metricasGlobales.eficienciaPromedio} ops/operario
-            </p>
-          </div>
-        </div>
-
-        {/* ALERTAS CRÍTICAS */}
-        {alertasCriticas.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <button
-              onClick={() => toggleSeccion('alertas')}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-200"
-            >
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-600 animate-pulse" />
-                <h2 className="text-lg font-bold text-gray-900">🚨 Alertas Críticas</h2>
-                <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-sm font-semibold">
-                  {alertasCriticas.length}
-                </span>
-              </div>
-              {seccionesAbiertas.alertas ?
-                <ChevronUp className="w-5 h-5 text-gray-400" /> :
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              }
-            </button>
-
-            {seccionesAbiertas.alertas && (
-              <div className="p-4 space-y-3">
-                {alertasCriticas.map((alerta, idx) => {
-                  const config = {
-                    critico: { bg: 'bg-red-50', border: 'border-red-500', icon: '🔴', text: 'text-red-800' },
-                    urgente: { bg: 'bg-orange-50', border: 'border-orange-500', icon: '🟠', text: 'text-orange-800' },
-                    atencion: { bg: 'bg-yellow-50', border: 'border-yellow-500', icon: '🟡', text: 'text-yellow-800' }
-                  };
-                  const c = config[alerta.nivel];
-
-                  return (
-                    <div key={idx} className={`${c.bg} border-l-4 ${c.border} p-4 rounded`}>
-                      <div className="flex items-start gap-3">
-                        <span className="text-2xl">{c.icon}</span>
-                        <div className="flex-1">
-                          <p className={`font-semibold ${c.text}`}>{alerta.mensaje}</p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Tipo: {alerta.tipo.replace('_', ' ')}
-                          </p>
+            {seccionesAbiertas.ordenes ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+          {seccionesAbiertas.ordenes && (
+            <div className="border-t border-slate-100 divide-y divide-slate-100">
+              {ordenesCriticas.map(orden => {
+                const prenda = prendas.find(p => p.id === orden.prenda_id);
+                const cfgs = {
+                  critico:  { bar: 'bg-rose-500',   badge: 'badge-red'   },
+                  urgente:  { bar: 'bg-orange-500',  badge: 'badge-amber' },
+                  atencion: { bar: 'bg-amber-400',   badge: 'badge-amber' }
+                };
+                const c = cfgs[orden.criticidad] || cfgs.atencion;
+                return (
+                  <div key={orden.id} className="relative px-5 py-4">
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${c.bar}`} />
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold text-slate-900">{orden.numero_orden}</h3>
+                          <span className={`badge ${c.badge} capitalize`}>{orden.criticidad}</span>
                         </div>
+                        <p className="text-sm text-slate-500">
+                          <span className="font-medium text-slate-700">{prenda?.referencia}</span> · {orden.color} · {orden.talla}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0 text-xs text-slate-400">
+                        {orden.operacionesCompletadas}/{orden.totalOperaciones} ops
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TABLA DE OPERARIOS EN LÍNEA */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <button
-            onClick={() => toggleSeccion('operarios')}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-200"
-          >
-            <div className="flex items-center gap-3">
-              <Users className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-bold text-gray-900">👷 Operarios en Línea</h2>
-              <span className="px-2 py-1 bg-gray-100 rounded text-sm font-semibold text-gray-700">
-                {operariosFiltrados.length}
-              </span>
-            </div>
-            {seccionesAbiertas.operarios ?
-              <ChevronUp className="w-5 h-5 text-gray-400" /> :
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            }
-          </button>
-
-          {seccionesAbiertas.operarios && (
-            <>
-              {/* Filtros */}
-              <div className="p-4 border-b border-gray-200 bg-gray-50">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setFiltroOperarios('hoy')}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-colors ${filtroOperarios === 'hoy'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-300'
-                      }`}
-                  >
-                    Hoy ({contadores.hoy})
-                  </button>
-                  <button
-                    onClick={() => setFiltroOperarios('atrasados')}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-colors ${filtroOperarios === 'atrasados'
-                      ? 'bg-red-600 text-white shadow-md'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-300'
-                      }`}
-                  >
-                    Más de 1 día ({contadores.atrasados})
-                  </button>
-                  <button
-                    onClick={() => setFiltroOperarios('disponibles')}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-colors ${filtroOperarios === 'disponibles'
-                      ? 'bg-green-600 text-white shadow-md'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-300'
-                      }`}
-                  >
-                    Disponibles ({contadores.disponibles})
-                  </button>
-                </div>
-              </div>
-
-              {/* Tabla */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-100 border-b-2 border-gray-300">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        Operario
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        Operación Actual
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        Avance
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                        onClick={() => {
-                          setOrdenOperarios(prev => ({
-                            campo: 'tiempoEnOperacion',
-                            direccion: prev.campo === 'tiempoEnOperacion' && prev.direccion === 'asc' ? 'desc' : 'asc'
-                          }));
-                        }}
-                      >
-                        <div className="flex items-center gap-1">
-                          Tiempo
-                          {ordenOperarios.campo === 'tiempoEnOperacion' && (
-                            <span className="text-gray-500">
-                              {ordenOperarios.direccion === 'asc' ? '↑' : '↓'}
-                            </span>
-                          )}
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        Pendientes
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        Completadas Hoy
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        Estado
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {operariosOrdenados.map(op => {
-                      const estadoConfig = {
-                        atascado: {
-                          border: 'border-l-4 border-red-500',
-                          bg: 'bg-red-50',
-                          badge: 'bg-red-100 text-red-800',
-                          icon: '🔴',
-                          texto: 'Atascado'
-                        },
-                        trabajando: {
-                          border: 'border-l-4 border-green-500',
-                          bg: 'hover:bg-green-50',
-                          badge: 'bg-green-100 text-green-800',
-                          icon: '🟢',
-                          texto: 'Trabajando'
-                        },
-                        finalizando: {
-                          border: 'border-l-4 border-yellow-500',
-                          bg: 'hover:bg-yellow-50',
-                          badge: 'bg-yellow-100 text-yellow-800',
-                          icon: '🟡',
-                          texto: 'Finalizando'
-                        },
-                        disponible: {
-                          border: 'border-l-4 border-gray-300',
-                          bg: 'hover:bg-gray-50',
-                          badge: 'bg-gray-100 text-gray-800',
-                          icon: '⚪',
-                          texto: 'Disponible'
-                        }
-                      };
-
-                      const config = estadoConfig[op.estado];
-
-                      return (
-                        <tr key={op.id} className={`${config.border} ${config.bg} transition-colors`}>
-                          <td className="px-4 py-3">
-                            <div>
-                              <p className="font-semibold text-gray-900">{op.nombre}</p>
-                              <p className="text-xs text-gray-500">ID: {op.id}</p>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-gray-900 font-medium">
-                              {op.operacionActual || '—'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="font-mono font-semibold text-gray-900">
-                              {op.avance || '—'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-gray-700 font-medium">
-                              {op.tiempoEnOperacion || '—'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="font-semibold text-gray-900 text-lg">
-                              {op.totalPendientes}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="font-semibold text-green-600 text-lg">
-                              {op.totalCompletadas}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${config.badge}`}>
-                              <span className="text-base">{config.icon}</span>
-                              {config.texto}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* ÓRDENES CRÍTICAS */}
-        {ordenesCriticas.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <button
-              onClick={() => toggleSeccion('ordenes')}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-200"
-            >
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 animate-pulse" />
-                <h2 className="text-lg font-bold text-gray-900">⚠️ Órdenes Críticas</h2>
-                <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-sm font-semibold">
-                  {ordenesCriticas.length}
-                </span>
-              </div>
-              {seccionesAbiertas.ordenes ?
-                <ChevronUp className="w-5 h-5 text-gray-400" /> :
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              }
-            </button>
-
-            {seccionesAbiertas.ordenes && (
-              <div className="divide-y divide-gray-200">
-                {ordenesCriticas.map(orden => {
-                  const prenda = prendas.find(p => p.id === orden.prenda_id);
-
-                  const criticidadConfig = {
-                    critico: {
-                      border: 'border-l-4 border-red-600',
-                      bg: 'bg-red-50',
-                      badge: 'bg-red-600 text-white',
-                      icon: '🔴'
-                    },
-                    urgente: {
-                      border: 'border-l-4 border-orange-500',
-                      bg: 'bg-orange-50',
-                      badge: 'bg-orange-600 text-white',
-                      icon: '🟠'
-                    },
-                    atencion: {
-                      border: 'border-l-4 border-yellow-500',
-                      bg: 'bg-yellow-50',
-                      badge: 'bg-yellow-600 text-white',
-                      icon: '🟡'
-                    }
-                  };
-
-                  const config = criticidadConfig[orden.criticidad];
-
-                  return (
-                    <div key={orden.id} className={`${config.border} ${config.bg} p-5 hover:bg-opacity-80 transition-colors`}>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-2xl">{config.icon}</span>
-                            <h3 className="font-bold text-gray-900 text-lg">{orden.numero_orden}</h3>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${config.badge}`}>
-                              {orden.criticidad}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700 mb-3">
-                            <span className="font-semibold">{prenda?.referencia}</span> • {orden.color} • {orden.talla}
-                          </p>
-
-                          {/* Barra de progreso */}
-                          <div className="mb-3">
-                            <div className="flex justify-between text-sm mb-1">
-                              <span className="text-gray-600">Progreso de operaciones</span>
-                              <span className="font-bold text-gray-900">
-                                {orden.operacionesCompletadas}/{orden.totalOperaciones} operaciones
-                              </span>
-                            </div>
-                            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full transition-all ${orden.progreso >= 80 ? 'bg-green-500' :
-                                  orden.progreso >= 50 ? 'bg-blue-500' :
-                                    orden.progreso >= 30 ? 'bg-yellow-500' : 'bg-red-500'
-                                  }`}
-                                style={{ width: `${orden.progreso}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 mt-3">
-                            <div className="text-center p-3 bg-white rounded-lg border border-gray-200">
-                              <Clock className="w-5 h-5 mx-auto text-gray-500 mb-1" />
-                              <p className="text-xs text-gray-500">Días en proceso</p>
-                              <p className="text-xl font-bold text-gray-900">{orden.diasDesdeEntrada}</p>
-                            </div>
-                            <div className="text-center p-3 bg-white rounded-lg border border-gray-200">
-                              <Package className="w-5 h-5 mx-auto text-gray-500 mb-1" />
-                              <p className="text-xs text-gray-500">Cantidad</p>
-                              <p className="text-xl font-bold text-gray-900">{orden.cantidad_total}</p>
-                            </div>
-                            <div className="text-center p-3 bg-white rounded-lg border border-gray-200">
-                              <TrendingUp className="w-5 h-5 mx-auto text-gray-500 mb-1" />
-                              <p className="text-xs text-gray-500">Progreso</p>
-                              <p className={`text-xl font-bold ${orden.progreso >= 80 ? 'text-green-600' :
-                                orden.progreso >= 50 ? 'text-blue-600' :
-                                  orden.progreso >= 30 ? 'text-yellow-600' : 'text-red-600'
-                                }`}>
-                                {orden.progreso}%
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+                      <div className={`h-full rounded-full transition-all ${orden.progreso >= 80 ? 'bg-emerald-500' : orden.progreso >= 50 ? 'bg-brand-500' : orden.progreso >= 30 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                        style={{ width: `${orden.progreso}%` }} />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* PANEL DE EFICIENCIA */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <button
-            onClick={() => toggleSeccion('metricas')}
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-200"
-          >
-            <div className="flex items-center gap-3">
-              <Activity className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-bold text-gray-900">📊 Métricas de Eficiencia</h2>
-            </div>
-            {seccionesAbiertas.metricas ?
-              <ChevronUp className="w-5 h-5 text-gray-400" /> :
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            }
-          </button>
-
-          {seccionesAbiertas.metricas && (
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Eficiencia promedio */}
-                <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border-2 border-blue-200">
-                  <div className="w-16 h-16 mx-auto mb-3 bg-blue-500 rounded-full flex items-center justify-center">
-                    <TrendingUp className="w-8 h-8 text-white" />
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <span><Clock className="w-3 h-3 inline mr-1" />{orden.diasDesdeEntrada} días</span>
+                      <span><Package className="w-3 h-3 inline mr-1" />{orden.cantidad_total} pzs</span>
+                      <span><TrendingUp className="w-3 h-3 inline mr-1" />{orden.progreso}% progreso</span>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">Eficiencia Promedio</p>
-                  <p className="text-4xl font-bold text-blue-600 mb-1">
-                    {metricasGlobales.eficienciaPromedio}
-                  </p>
-                  <p className="text-xs text-gray-500">ops por operario activo</p>
-                </div>
-
-                {/* Carga de trabajo */}
-                <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border-2 border-purple-200">
-                  <div className="w-16 h-16 mx-auto mb-3 bg-purple-500 rounded-full flex items-center justify-center">
-                    <Users className="w-8 h-8 text-white" />
-                  </div>
-                  <p className="text-sm text-gray-600 mb-1">Carga de Trabajo</p>
-                  <p className="text-4xl font-bold text-purple-600 mb-1">
-                    {Math.round((metricasGlobales.operariosActivos / empleados.length) * 100)}%
-                  </p>
-                  <p className="text-xs text-gray-500">capacidad utilizada</p>
-                </div>
-
-                {/* Producción monetaria */}
-                <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border-2 border-green-200">
-                  <div className="w-16 h-16 mx-auto mb-3 bg-green-500 rounded-full flex items-center justify-center">
-                    <Package className="w-8 h-8 text-white" />
-                  </div>
-                  <p className="text-sm text-gray-600 mb-1">Valor Producido Hoy</p>
-                  <p className="text-4xl font-bold text-green-600 mb-1">
-                    ${Math.round(metricasGlobales.totalMontoHoy).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500">ingresos del día</p>
-                </div>
-              </div>
-
-              {/* Resumen estadístico */}
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-bold text-gray-900 mb-3">📈 Resumen del Día</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500">Asignaciones del día</p>
-                    <p className="text-2xl font-bold text-gray-900">{asignacionesHoy.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Completadas hoy</p>
-                    <p className="text-2xl font-bold text-green-600">{asignacionesCompletadasHoy.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Pendientes totales</p>
-                    <p className="text-2xl font-bold text-amber-600">{asignacionesPendientes.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Órdenes activas</p>
-                    <p className="text-2xl font-bold text-blue-600">{ordenes.filter(o => o.activo).length}</p>
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
           )}
         </div>
+      )}
 
-        {/* FOOTER */}
-        <div className="bg-gray-100 rounded-lg p-4 text-center text-sm text-gray-600">
-          <div className="flex justify-center items-center gap-4 flex-wrap">
-            <span className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              Sistema operativo
-            </span>
-            <span>•</span>
-            <span>
-              Última actualización: {new Date().toLocaleTimeString('es-CO')}
-            </span>
-            <span>•</span>
-            <span>
-              {empleados.length} operarios • {ordenes.length} órdenes • {asignaciones.length} asignaciones
-            </span>
+      {/* PANEL DE EFICIENCIA */}
+      <div className="card overflow-hidden">
+        <button onClick={() => toggleSeccion('metricas')} className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors">
+          <div className="flex items-center gap-2.5">
+            <Activity className="w-4 h-4 text-brand-600" />
+            <h2 className="text-sm font-semibold text-slate-800">Métricas de Eficiencia</h2>
           </div>
-        </div>
+          {seccionesAbiertas.metricas ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </button>
+        {seccionesAbiertas.metricas && (
+          <div className="border-t border-slate-100 p-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+              <div className="text-center p-5 bg-blue-50 rounded-2xl">
+                <div className="w-12 h-12 mx-auto mb-3 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-blue-600" />
+                </div>
+                <p className="text-xs text-slate-500 mb-1">Eficiencia Promedio</p>
+                <p className="text-3xl font-bold text-blue-600">{metricasGlobales.eficienciaPromedio}</p>
+                <p className="text-xs text-slate-400 mt-1">ops por operario activo</p>
+              </div>
+              <div className="text-center p-5 bg-brand-50 rounded-2xl">
+                <div className="w-12 h-12 mx-auto mb-3 bg-brand-100 rounded-xl flex items-center justify-center">
+                  <Users className="w-6 h-6 text-brand-600" />
+                </div>
+                <p className="text-xs text-slate-500 mb-1">Carga de Trabajo</p>
+                <p className="text-3xl font-bold text-brand-600">{Math.round((metricasGlobales.operariosActivos / Math.max(empleados.length, 1)) * 100)}%</p>
+                <p className="text-xs text-slate-400 mt-1">capacidad utilizada</p>
+              </div>
+              <div className="text-center p-5 bg-emerald-50 rounded-2xl">
+                <div className="w-12 h-12 mx-auto mb-3 bg-emerald-100 rounded-xl flex items-center justify-center">
+                  <Package className="w-6 h-6 text-emerald-600" />
+                </div>
+                <p className="text-xs text-slate-500 mb-1">Valor Producido Hoy</p>
+                <p className="text-3xl font-bold text-emerald-600">${Math.round(metricasGlobales.totalMontoHoy).toLocaleString()}</p>
+                <p className="text-xs text-slate-400 mt-1">ingresos del día</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-xl">
+              <div>
+                <p className="text-xs text-slate-400">Asignaciones hoy</p>
+                <p className="text-xl font-bold text-slate-900">{asignacionesHoy.length}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Completadas hoy</p>
+                <p className="text-xl font-bold text-emerald-600">{asignacionesCompletadasHoy.length}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Pendientes totales</p>
+                <p className="text-xl font-bold text-amber-600">{asignacionesPendientes.length}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Órdenes activas</p>
+                <p className="text-xl font-bold text-brand-600">{ordenes.filter(o => o.activo).length}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
+      {/* FOOTER */}
+      <div className="text-center py-3 border-t border-slate-100">
+        <p className="text-xs text-slate-400 flex items-center justify-center gap-2">
+          <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+          Sistema operativo · {new Date().toLocaleTimeString('es-CO')} · {empleados.length} operarios · {ordenes.length} órdenes · {asignaciones.length} asignaciones
+        </p>
       </div>
     </div>
   );
