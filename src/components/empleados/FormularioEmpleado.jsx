@@ -1,14 +1,13 @@
-// src/components/empleados/FormularioEmpleado.jsx
 import React from 'react';
-import { User, Phone } from 'lucide-react';
+import { User, Phone, Save, X } from 'lucide-react';
 
-const FormularioEmpleado = ({ 
-  formData, 
-  onChange, 
-  onSubmit, 
+const FormularioEmpleado = ({
+  formData,
+  onChange,
+  onSubmit,
   onCancelar,
   editando = false,
-  loading = false 
+  loading = false,
 }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -16,31 +15,34 @@ const FormularioEmpleado = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-gray-50 p-4 rounded-lg mb-6">
-      <h3 className="font-semibold text-lg mb-4">
-        {editando ? 'Editar Empleado' : 'Nuevo Empleado'}
-      </h3>
-      
+    <form onSubmit={handleSubmit}>
+      <div className="flex items-center gap-2 mb-5">
+        <div className="w-1 h-5 bg-brand-600 rounded-full" />
+        <h3 className="text-sm font-semibold text-slate-800">
+          {editando ? 'Editar empleado' : 'Nuevo empleado'}
+        </h3>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <User className="w-4 h-4 inline mr-1" />
-            Nombre Completo
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5 text-slate-400" />
+            Nombre completo
           </label>
           <input
             type="text"
             name="nombre"
             value={formData.nombre}
             onChange={onChange}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="input-base"
             placeholder="Ej: Juan Pérez"
             required
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Phone className="w-4 h-4 inline mr-1" />
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+            <Phone className="w-3.5 h-3.5 text-slate-400" />
             Teléfono
           </label>
           <input
@@ -48,7 +50,7 @@ const FormularioEmpleado = ({
             name="telefono"
             value={formData.telefono}
             onChange={onChange}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="input-base"
             placeholder="Ej: 3001234567"
             required
           />
@@ -58,18 +60,27 @@ const FormularioEmpleado = ({
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
+            className="btn-primary flex-1"
           >
-            {loading ? 'Guardando...' : editando ? 'Actualizar' : 'Agregar'}
+            {loading ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                {editando ? 'Actualizar' : 'Agregar'}
+              </>
+            )}
           </button>
-          
+
           {editando && (
-            <button
-              type="button"
-              onClick={onCancelar}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-            >
-              Cancelar
+            <button type="button" onClick={onCancelar} className="btn-secondary">
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>

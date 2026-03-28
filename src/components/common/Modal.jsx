@@ -1,35 +1,47 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
+const SIZES = {
+  sm: 'max-w-md',
+  md: 'max-w-lg',
+  lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
+};
+
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  // Cerrar con Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  const sizes = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl'
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div 
-        className="absolute inset-0 bg-black bg-opacity-50"
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+      {/* Overlay */}
+      <div
+        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      
-      <div className={`relative bg-white rounded-lg shadow-2xl ${sizes[size]} w-full mx-4 max-h-[90vh] overflow-hidden`}>
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-bold">{title}</h3>
+
+      {/* Panel */}
+      <div className={`relative bg-white rounded-2xl shadow-card-lg ${SIZES[size]} w-full max-h-[90vh] flex flex-col overflow-hidden animate-slide-up`}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
+          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
-        
-        <div className="p-4 overflow-y-auto max-h-[calc(90vh-8rem)]">
+
+        {/* Body */}
+        <div className="px-6 py-5 overflow-y-auto flex-1">
           {children}
         </div>
       </div>

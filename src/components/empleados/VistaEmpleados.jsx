@@ -1,6 +1,5 @@
-// src/components/empleados/VistaEmpleados.jsx
 import React, { useState } from 'react';
-import { User } from 'lucide-react';
+import { Users } from 'lucide-react';
 import CampoBusqueda from '../common/CampoBusqueda';
 import Paginacion from '../common/Paginacion';
 import ModalConfirmar from '../common/ModalConfirmar';
@@ -11,40 +10,25 @@ import { usePaginacion } from '../../hooks/usePaginacion';
 import { useModal } from '../../hooks/useModal';
 import { crearEmpleado, actualizarEmpleado, eliminarEmpleado } from '../../services/empleadosService';
 
-const VistaEmpleados = ({ 
-  empleados, 
-  recargarDatos, 
+const VistaEmpleados = ({
+  empleados,
+  recargarDatos,
   calcularNomina,
-  mostrarExito, 
-  mostrarError, 
-  mostrarAdvertencia 
+  mostrarExito,
+  mostrarError,
+  mostrarAdvertencia,
 }) => {
-  const [formData, setFormData] = useState({ nombre: '', telefono: '' });
-  const [editando, setEditando] = useState(null);
+  const [formData, setFormData]   = useState({ nombre: '', telefono: '' });
+  const [editando, setEditando]   = useState(null);
   const [guardando, setGuardando] = useState(false);
 
-  // Hooks personalizados
-  const { busqueda, setBusqueda, datosFiltrados } = useBusqueda(
-    empleados, 
-    ['nombre', 'telefono', 'id']
-  );
-
-  const {
-    paginaActual,
-    totalPaginas,
-    datosPaginados,
-    primeraPagina,
-    paginaAnterior,
-    paginaSiguiente,
-    ultimaPagina
-  } = usePaginacion(datosFiltrados);
-
+  const { busqueda, setBusqueda, datosFiltrados } = useBusqueda(empleados, ['nombre', 'telefono', 'id']);
+  const { paginaActual, totalPaginas, datosPaginados, primeraPagina, paginaAnterior, paginaSiguiente, ultimaPagina } = usePaginacion(datosFiltrados);
   const modalEliminar = useModal();
 
-  // Manejadores de formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async () => {
@@ -52,9 +36,7 @@ const VistaEmpleados = ({
       mostrarAdvertencia('Por favor completa todos los campos');
       return;
     }
-
     setGuardando(true);
-
     try {
       if (editando) {
         await actualizarEmpleado(editando.id, formData);
@@ -63,12 +45,11 @@ const VistaEmpleados = ({
         await crearEmpleado(formData);
         mostrarExito('Empleado agregado correctamente');
       }
-
       setFormData({ nombre: '', telefono: '' });
       setEditando(null);
       recargarDatos();
     } catch (error) {
-      mostrarError(`Error: ${error.message}`);
+      mostrarError(error.message);
     } finally {
       setGuardando(false);
     }
@@ -76,10 +57,7 @@ const VistaEmpleados = ({
 
   const handleEditar = (empleado) => {
     setEditando(empleado);
-    setFormData({
-      nombre: empleado.nombre,
-      telefono: empleado.telefono
-    });
+    setFormData({ nombre: empleado.nombre, telefono: empleado.telefono });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -94,31 +72,25 @@ const VistaEmpleados = ({
       mostrarExito('Empleado eliminado correctamente');
       recargarDatos();
     } catch (error) {
-      mostrarError(`Error al eliminar: ${error.message}`);
+      mostrarError(error.message);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-100 rounded-lg">
-            <User className="w-8 h-8 text-blue-600" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Gestión de Empleados</h2>
-            <p className="text-gray-600">Administra tu equipo de trabajo</p>
-          </div>
+    <div className="space-y-6 animate-slide-up">
+      {/* Page header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Empleados</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Administra el equipo de trabajo</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-600">Total empleados</p>
-          <p className="text-3xl font-bold text-blue-600">{empleados.length}</p>
-        </div>
+        <span className="badge-brand text-sm px-3 py-1.5 font-semibold">
+          {empleados.length} registrados
+        </span>
       </div>
 
       {/* Formulario */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="card-p">
         <FormularioEmpleado
           formData={formData}
           onChange={handleChange}
@@ -130,13 +102,16 @@ const VistaEmpleados = ({
       </div>
 
       {/* Tabla */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold mb-4">Lista de Empleados</h3>
-        
+      <div className="card-p space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-800">Lista de empleados</h2>
+          <span className="text-xs text-slate-400">{datosFiltrados.length} resultado{datosFiltrados.length !== 1 ? 's' : ''}</span>
+        </div>
+
         <CampoBusqueda
           valor={busqueda}
           onChange={setBusqueda}
-          placeholder="🔍 Buscar por ID, nombre o teléfono..."
+          placeholder="Buscar por ID, nombre o teléfono..."
           totalResultados={datosFiltrados.length}
           totalItems={empleados.length}
         />
@@ -159,13 +134,12 @@ const VistaEmpleados = ({
         />
       </div>
 
-      {/* Modal de confirmación */}
       <ModalConfirmar
         isOpen={modalEliminar.isOpen}
         onClose={modalEliminar.cerrar}
         onConfirm={handleEliminar}
         titulo="¿Eliminar empleado?"
-        mensaje="Esta acción marcará al empleado como inactivo. No se eliminarán sus registros históricos."
+        mensaje="Esta acción marcará al empleado como inactivo. Sus registros históricos se conservan."
         tipo="danger"
       />
     </div>

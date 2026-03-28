@@ -1,6 +1,5 @@
-// src/components/asignaciones/VistaAsignaciones.jsx
 import React, { useState, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { ClipboardList, X } from 'lucide-react';
 import CampoBusqueda from '../common/CampoBusqueda';
 import Paginacion from '../common/Paginacion';
 import ModalConfirmar from '../common/ModalConfirmar';
@@ -10,179 +9,108 @@ import TablaAsignaciones from './TablaAsignaciones';
 import { useBusqueda } from '../../hooks/useBusqueda';
 import { usePaginacion } from '../../hooks/usePaginacion';
 import { useModal } from '../../hooks/useModal';
-import { 
-  crearAsignacion, 
-  completarAsignacion, 
-  revertirAsignacion, 
-  eliminarAsignacion 
+import {
+  crearAsignacion,
+  completarAsignacion,
+  revertirAsignacion,
+  eliminarAsignacion,
 } from '../../services/asignacionesService';
 import { obtenerFechaHoy } from '../../utils/dateUtils';
 
-const VistaAsignaciones = ({ 
+const FORM_INICIAL = {
+  empleado_id: '',
+  prenda_id: '',
+  operacion_id: '',
+  cantidad: '',
+  talla: 'S',
+  color: '',
+  orden_id: '',
+  fecha: obtenerFechaHoy(),
+};
+
+const VistaAsignaciones = ({
   asignaciones,
   empleados,
   prendas,
   operaciones,
   ordenes,
   recargarDatos,
-  mostrarExito, 
-  mostrarError, 
-  mostrarAdvertencia 
+  mostrarExito,
+  mostrarError,
+  mostrarAdvertencia,
 }) => {
-  const [formAsig, setFormAsig] = useState({
-    empleado_id: '',
-    prenda_id: '',
-    operacion_id: '',
-    cantidad: '',
-    talla: 'S',
-    color: '',
-    orden_id: '',
-    fecha: obtenerFechaHoy()
-  });
+  const [formAsig, setFormAsig]     = useState(FORM_INICIAL);
+  const [ordenEstado, setOrdenEstado] = useState(null);
 
-  const [ordenEstado, setOrdenEstado] = useState(null); // null | 'pendientes' | 'completadas'
-
-  const modalEliminar = useModal();
+  const modalEliminar  = useModal();
   const modalCompletar = useModal();
-  const modalRevertir = useModal();
+  const modalRevertir  = useModal();
 
-  // Búsqueda mejorada
   const { busqueda, setBusqueda, datosFiltrados } = useBusqueda(
     asignaciones,
     (asig, termino) => {
-      const emp = empleados.find(e => e.id === asig.empleado_id);
-      const op = operaciones.find(o => o.id === asig.operacion_id);
-      const prenda = prendas.find(p => p.id === asig.prenda_id);
-      
+      const emp    = empleados.find((e) => e.id === asig.empleado_id);
+      const op     = operaciones.find((o) => o.id === asig.operacion_id);
+      const prenda = prendas.find((p) => p.id === asig.prenda_id);
+      const t = termino.toLowerCase();
       return (
-        (emp && (
-          emp.nombre.toLowerCase().includes(termino.toLowerCase()) ||
-          emp.id.toString().includes(termino)
-        )) ||
-        (op && op.nombre.toLowerCase().includes(termino.toLowerCase())) ||
-        (prenda && prenda.referencia.toLowerCase().includes(termino.toLowerCase())) ||
-        asig.talla.toLowerCase().includes(termino.toLowerCase()) ||
-        (asig.color && asig.color.toLowerCase().includes(termino.toLowerCase()))
+        emp?.nombre.toLowerCase().includes(t) ||
+        emp?.id.toString().includes(t) ||
+        op?.nombre.toLowerCase().includes(t) ||
+        prenda?.referencia.toLowerCase().includes(t) ||
+        asig.talla?.toLowerCase().includes(t) ||
+        asig.color?.toLowerCase().includes(t)
       );
     }
   );
 
-  // Ordenamiento por estado
   const asignacionesOrdenadas = useMemo(() => {
     if (!ordenEstado) return datosFiltrados;
-
     return [...datosFiltrados].sort((a, b) => {
       if (ordenEstado === 'pendientes') {
-        // Pendientes primero
-        if (!a.completado && b.completado) return -1;
-        if (a.completado && !b.completado) return 1;
-        return 0;
-      } else {
-        // Completadas primero
-        if (a.completado && !b.completado) return -1;
-        if (!a.completado && b.completado) return 1;
-        return 0;
+        return (!a.completado && b.completado) ? -1 : (a.completado && !b.completado) ? 1 : 0;
       }
+      return (a.completado && !b.completado) ? -1 : (!a.completado && b.completado) ? 1 : 0;
     });
   }, [datosFiltrados, ordenEstado]);
 
-  // Paginación
-  const {
-    paginaActual,
-    totalPaginas,
-    datosPaginados,
-    primeraPagina,
-    paginaAnterior,
-    paginaSiguiente,
-    ultimaPagina
-  } = usePaginacion(asignacionesOrdenadas, 20); // 20 items por página
+  const { paginaActual, totalPaginas, datosPaginados, primeraPagina, paginaAnterior, paginaSiguiente, ultimaPagina } =
+    usePaginacion(asignacionesOrdenadas, 20);
 
   const handleCambiarOrdenEstado = () => {
-    if (ordenEstado === null) {
-      setOrdenEstado('pendientes');
-    } else if (ordenEstado === 'pendientes') {
-      setOrdenEstado('completadas');
-    } else {
-      setOrdenEstado(null); // Volver al orden original
-    }
+    setOrdenEstado((prev) => (prev === null ? 'pendientes' : prev === 'pendientes' ? 'completadas' : null));
   };
 
-  const handleSeleccionarOrden = async (ordenId) => {
-    const orden = ordenes.find(o => o.id === parseInt(ordenId));
+  const handleSeleccionarOrden = (ordenId) => {
+    const orden = ordenes.find((o) => o.id === parseInt(ordenId));
     if (orden) {
-      setFormAsig({
-        ...formAsig,
-        orden_id: ordenId,
-        prenda_id: orden.prenda_id.toString(),
-        color: orden.color,
-        talla: orden.talla,
-        operacion_id: ''
-      });
+      setFormAsig({ ...formAsig, orden_id: ordenId, prenda_id: orden.prenda_id.toString(), color: orden.color, talla: orden.talla, operacion_id: '' });
     } else {
-      setFormAsig({
-        ...formAsig,
-        orden_id: '',
-        prenda_id: '',
-        color: '',
-        operacion_id: ''
-      });
+      setFormAsig({ ...formAsig, orden_id: '', prenda_id: '', color: '', operacion_id: '' });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!formAsig.orden_id) {
-      mostrarAdvertencia('Debe seleccionar una orden de producción');
-      return;
-    }
-
-    if (!formAsig.empleado_id || !formAsig.operacion_id || !formAsig.cantidad) {
-      mostrarAdvertencia('Complete todos los campos');
-      return;
-    }
+    if (!formAsig.orden_id) { mostrarAdvertencia('Selecciona una orden de producción'); return; }
+    if (!formAsig.empleado_id || !formAsig.operacion_id || !formAsig.cantidad) { mostrarAdvertencia('Completa todos los campos'); return; }
 
     try {
-      const orden = ordenes.find(o => o.id === parseInt(formAsig.orden_id));
-      const operacionId = parseInt(formAsig.operacion_id);
-      const cantidadAsignada = parseInt(formAsig.cantidad);
+      const orden           = ordenes.find((o) => o.id === parseInt(formAsig.orden_id));
+      const operacionId     = parseInt(formAsig.operacion_id);
+      const cantidadAsig    = parseInt(formAsig.cantidad);
+      const yaAsignadas     = asignaciones.filter((a) => a.orden_id === orden.id && a.operacion_id === operacionId).reduce((s, a) => s + Number(a.cantidad || 0), 0);
+      const disponibles     = orden.cantidad_total - yaAsignadas;
 
-      const asignacionesExistentes = asignaciones.filter(a =>
-        a.orden_id === orden.id && a.operacion_id === operacionId
-      );
-
-      const yaAsignadas = asignacionesExistentes.reduce((sum, a) => sum + Number(a.cantidad || 0), 0);
-      const disponibles = orden.cantidad_total - yaAsignadas;
-
-      if (cantidadAsignada > disponibles) {
-        mostrarError(
-          `Solo hay ${disponibles} piezas disponibles para esta operación.\n` +
-          `Ya asignadas: ${yaAsignadas} de ${orden.cantidad_total} total.`
-        );
+      if (cantidadAsig > disponibles) {
+        mostrarError(`Solo hay ${disponibles} piezas disponibles.\nYa asignadas: ${yaAsignadas} de ${orden.cantidad_total}.`);
         return;
       }
 
-      const operacion = operaciones.find(o => o.id === operacionId);
-      const monto = operacion.costo * cantidadAsignada;
-
-      await crearAsignacion({ ...formAsig, monto });
-      
-      mostrarExito(
-        `Operación asignada correctamente.\n` +
-        `Quedan ${disponibles - cantidadAsignada} piezas disponibles para esta operación.`
-      );
-
-      setFormAsig({
-        empleado_id: '',
-        prenda_id: '',
-        operacion_id: '',
-        cantidad: '',
-        talla: 'S',
-        color: '',
-        orden_id: '',
-        fecha: obtenerFechaHoy()
-      });
-
+      const operacion = operaciones.find((o) => o.id === operacionId);
+      await crearAsignacion({ ...formAsig, monto: operacion.costo * cantidadAsig });
+      mostrarExito(`Asignación creada. Quedan ${disponibles - cantidadAsig} piezas disponibles.`);
+      setFormAsig({ ...FORM_INICIAL, fecha: obtenerFechaHoy() });
       await recargarDatos();
     } catch (error) {
       mostrarError(error.message);
@@ -191,41 +119,21 @@ const VistaAsignaciones = ({
 
   const handleCompletar = async (cantidad) => {
     try {
-      const asignacion = modalCompletar.modalData;
+      const asig = modalCompletar.modalData;
       const cantidadEntregada = parseInt(cantidad);
-      
-      if (isNaN(cantidadEntregada) || cantidadEntregada <= 0 || cantidadEntregada > asignacion.cantidad) {
-        mostrarError(`Debe ingresar un número entre 1 y ${asignacion.cantidad}`);
-        return;
+      if (isNaN(cantidadEntregada) || cantidadEntregada <= 0 || cantidadEntregada > asig.cantidad) {
+        mostrarError(`Ingresa un número entre 1 y ${asig.cantidad}`); return;
       }
+      const operacion = operaciones.find((o) => o.id === asig.operacion_id);
+      await completarAsignacion(asig.id, cantidadEntregada, operacion.costo * cantidadEntregada);
 
-      if (cantidadEntregada < asignacion.cantidad) {
-        const resto = asignacion.cantidad - cantidadEntregada;
-        const operacion = operaciones.find(o => o.id === asignacion.operacion_id);
-
-        const montoEntregado = operacion.costo * cantidadEntregada;
-await completarAsignacion(asignacion.id, cantidadEntregada, montoEntregado);
-
-        await crearAsignacion({
-          empleado_id: asignacion.empleado_id,
-          prenda_id: asignacion.prenda_id,
-          operacion_id: asignacion.operacion_id,
-          cantidad: resto,
-          talla: asignacion.talla,
-          color: asignacion.color,
-          orden_id: asignacion.orden_id,
-          fecha: asignacion.fecha,
-          monto: operacion.costo * resto
-        });
-
+      if (cantidadEntregada < asig.cantidad) {
+        const resto = asig.cantidad - cantidadEntregada;
+        await crearAsignacion({ empleado_id: asig.empleado_id, prenda_id: asig.prenda_id, operacion_id: asig.operacion_id, cantidad: resto, talla: asig.talla, color: asig.color, orden_id: asig.orden_id, fecha: asig.fecha, monto: operacion.costo * resto });
         mostrarExito(`Entregadas ${cantidadEntregada} piezas. Quedan ${resto} pendientes.`);
       } else {
-      const operacion = operaciones.find(o => o.id === asignacion.operacion_id);
-      const montoTotal = operacion.costo * cantidadEntregada;
-      await completarAsignacion(asignacion.id, cantidadEntregada, montoTotal);
-      mostrarExito('Asignación completada');
-    }
-
+        mostrarExito('Asignación completada');
+      }
       await recargarDatos();
     } catch (error) {
       mostrarError(error.message);
@@ -234,40 +142,22 @@ await completarAsignacion(asignacion.id, cantidadEntregada, montoEntregado);
 
   const handleRevertir = async (cantidad) => {
     try {
-      const asignacion = modalRevertir.modalData;
+      const asig = modalRevertir.modalData;
       const cantidadRevertir = parseInt(cantidad);
-
-      if (isNaN(cantidadRevertir) || cantidadRevertir <= 0 || cantidadRevertir > asignacion.cantidad) {
-        mostrarError(`Debe ingresar un número entre 1 y ${asignacion.cantidad}`);
-        return;
+      if (isNaN(cantidadRevertir) || cantidadRevertir <= 0 || cantidadRevertir > asig.cantidad) {
+        mostrarError(`Ingresa un número entre 1 y ${asig.cantidad}`); return;
       }
+      const operacion = operaciones.find((o) => o.id === asig.operacion_id);
 
-      const operacion = operaciones.find(o => o.id === asignacion.operacion_id);
-
-      if (cantidadRevertir < asignacion.cantidad) {
-        const quedan = asignacion.cantidad - cantidadRevertir;
-
-        const montoQuedan = operacion.costo * quedan;
-await completarAsignacion(asignacion.id, quedan, montoQuedan);
-
-        await crearAsignacion({
-          empleado_id: asignacion.empleado_id,
-          prenda_id: asignacion.prenda_id,
-          operacion_id: asignacion.operacion_id,
-          cantidad: cantidadRevertir,
-          talla: asignacion.talla,
-          color: asignacion.color,
-          orden_id: asignacion.orden_id,
-          fecha: asignacion.fecha,
-          monto: operacion.costo * cantidadRevertir
-        });
-
+      if (cantidadRevertir < asig.cantidad) {
+        const quedan = asig.cantidad - cantidadRevertir;
+        await completarAsignacion(asig.id, quedan, operacion.costo * quedan);
+        await crearAsignacion({ empleado_id: asig.empleado_id, prenda_id: asig.prenda_id, operacion_id: asig.operacion_id, cantidad: cantidadRevertir, talla: asig.talla, color: asig.color, orden_id: asig.orden_id, fecha: asig.fecha, monto: operacion.costo * cantidadRevertir });
         mostrarExito(`Revertidas ${cantidadRevertir} piezas. Quedan ${quedan} completadas.`);
       } else {
-        await revertirAsignacion(asignacion.id);
+        await revertirAsignacion(asig.id);
         mostrarExito('Asignación completamente revertida');
       }
-
       await recargarDatos();
     } catch (error) {
       mostrarError(error.message);
@@ -277,71 +167,36 @@ await completarAsignacion(asignacion.id, quedan, montoQuedan);
   const handleEliminar = async () => {
     try {
       await eliminarAsignacion(modalEliminar.modalData.id);
-      mostrarExito('Asignación eliminada correctamente');
+      mostrarExito('Asignación eliminada');
       await recargarDatos();
     } catch (error) {
       mostrarError(error.message);
     }
   };
 
+  const pendientes  = asignaciones.filter((a) => !a.completado).length;
+  const completadas = asignaciones.filter((a) => a.completado).length;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-green-100 rounded-lg">
-            <Plus className="w-8 h-8 text-green-600" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Gestión de Asignaciones</h2>
-            <p className="text-gray-600">Asigna operaciones a empleados</p>
-          </div>
+    <div className="space-y-6 animate-slide-up">
+      {/* Page header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Asignaciones</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Asigna operaciones a empleados</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-600">Total asignaciones</p>
-          <p className="text-3xl font-bold text-green-600">{asignaciones.length}</p>
+        <div className="flex items-center gap-2">
+          <span className="badge-amber">{pendientes} pendientes</span>
+          <span className="badge-green">{completadas} completadas</span>
         </div>
       </div>
 
-      {/* Modales */}
-      <ModalConfirmar
-        isOpen={modalEliminar.isOpen}
-        onClose={modalEliminar.cerrar}
-        onConfirm={handleEliminar}
-        titulo="Confirmar Eliminación"
-        mensaje="¿Está seguro de eliminar esta asignación?"
-        tipo="danger"
-      />
-
-      <ModalInput
-        isOpen={modalCompletar.isOpen}
-        onClose={modalCompletar.cerrar}
-        onSubmit={handleCompletar}
-        titulo="Completar Asignación"
-        label={`Cantidad entregada de ${modalCompletar.modalData?.cantidad || 0} asignadas:`}
-        placeholder="Cantidad"
-        valorInicial={modalCompletar.modalData?.cantidad?.toString() || ''}
-        tipo="number"
-        min="1"
-        max={modalCompletar.modalData?.cantidad}
-      />
-
-      <ModalInput
-        isOpen={modalRevertir.isOpen}
-        onClose={modalRevertir.cerrar}
-        onSubmit={handleRevertir}
-        titulo="Revertir Asignación"
-        label={`Cantidad a revertir de ${modalRevertir.modalData?.cantidad || 0} completadas:`}
-        placeholder="Cantidad"
-        valorInicial={modalRevertir.modalData?.cantidad?.toString() || ''}
-        tipo="number"
-        min="1"
-        max={modalRevertir.modalData?.cantidad}
-      />
-
       {/* Formulario */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold mb-4">Nueva Asignación</h3>
+      <div className="card-p">
+        <div className="flex items-center gap-2 mb-5">
+          <div className="w-1 h-5 bg-brand-600 rounded-full" />
+          <h2 className="text-sm font-semibold text-slate-800">Nueva asignación</h2>
+        </div>
         <FormularioAsignacion
           formAsig={formAsig}
           setFormAsig={setFormAsig}
@@ -356,28 +211,27 @@ await completarAsignacion(asignacion.id, quedan, montoQuedan);
       </div>
 
       {/* Tabla */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold mb-4">Lista de Asignaciones</h3>
-
-        {/* Info de ordenamiento */}
-        {ordenEstado && (
-          <div className="mb-3 p-2 bg-blue-50 rounded text-sm text-blue-800">
-            <strong>Ordenando por:</strong> {
-              ordenEstado === 'pendientes' ? 'Pendientes primero ↑' : 'Completadas primero ↓'
-            }
-            <button 
-              onClick={() => setOrdenEstado(null)}
-              className="ml-2 underline hover:no-underline"
-            >
-              Quitar orden
-            </button>
+      <div className="card-p space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-800">Lista de asignaciones</h2>
+          <div className="flex items-center gap-2">
+            {ordenEstado && (
+              <button
+                onClick={() => setOrdenEstado(null)}
+                className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-800 bg-brand-50 px-2.5 py-1 rounded-lg transition-colors"
+              >
+                Ordenando: {ordenEstado}
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            <span className="text-xs text-slate-400">{asignacionesOrdenadas.length} resultado{asignacionesOrdenadas.length !== 1 ? 's' : ''}</span>
           </div>
-        )}
+        </div>
 
         <CampoBusqueda
           valor={busqueda}
           onChange={setBusqueda}
-          placeholder="🔍 Buscar por empleado, operación, prenda, color o talla..."
+          placeholder="Buscar por empleado, operación, prenda, color o talla..."
           totalResultados={datosFiltrados.length}
           totalItems={asignaciones.length}
         />
@@ -387,9 +241,9 @@ await completarAsignacion(asignacion.id, quedan, montoQuedan);
           empleados={empleados}
           operaciones={operaciones}
           prendas={prendas}
-          onCompletar={(asig) => modalCompletar.abrir(asig)}
-          onRevertir={(asig) => modalRevertir.abrir(asig)}
-          onEliminar={(asig) => modalEliminar.abrir(asig)}
+          onCompletar={(a) => modalCompletar.abrir(a)}
+          onRevertir={(a) => modalRevertir.abrir(a)}
+          onEliminar={(a) => modalEliminar.abrir(a)}
           ordenEstado={ordenEstado}
           onCambiarOrdenEstado={handleCambiarOrdenEstado}
         />
@@ -404,6 +258,40 @@ await completarAsignacion(asignacion.id, quedan, montoQuedan);
           ultimaPagina={ultimaPagina}
         />
       </div>
+
+      {/* Modales */}
+      <ModalConfirmar
+        isOpen={modalEliminar.isOpen}
+        onClose={modalEliminar.cerrar}
+        onConfirm={handleEliminar}
+        titulo="¿Eliminar asignación?"
+        mensaje="Esta acción no se puede deshacer. Se eliminará el registro permanentemente."
+        tipo="danger"
+      />
+      <ModalInput
+        isOpen={modalCompletar.isOpen}
+        onClose={modalCompletar.cerrar}
+        onSubmit={handleCompletar}
+        titulo="Completar asignación"
+        label={`Cantidad entregada de ${modalCompletar.modalData?.cantidad || 0} asignadas:`}
+        placeholder="Cantidad"
+        valorInicial={modalCompletar.modalData?.cantidad?.toString() || ''}
+        tipo="number"
+        min="1"
+        max={modalCompletar.modalData?.cantidad}
+      />
+      <ModalInput
+        isOpen={modalRevertir.isOpen}
+        onClose={modalRevertir.cerrar}
+        onSubmit={handleRevertir}
+        titulo="Revertir asignación"
+        label={`Cantidad a revertir de ${modalRevertir.modalData?.cantidad || 0} completadas:`}
+        placeholder="Cantidad"
+        valorInicial={modalRevertir.modalData?.cantidad?.toString() || ''}
+        tipo="number"
+        min="1"
+        max={modalRevertir.modalData?.cantidad}
+      />
     </div>
   );
 };

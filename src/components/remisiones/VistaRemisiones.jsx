@@ -348,54 +348,33 @@ const VistaRemisiones = ({
   };
 
   return (
-    <div>
-      <ModalConfirmar
-        isOpen={modalEliminar.isOpen}
-        onClose={modalEliminar.cerrar}
-        onConfirm={handleEliminar}
-        titulo="Confirmar Eliminación"
-        mensaje="¿Está seguro de eliminar esta remisión?"
-        tipo="danger"
-      />
-
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-bold mb-4">Crear Remisión/Despacho</h2>
-
-        <FormularioRemision
-          formRemision={formRemision}
-          setFormRemision={setFormRemision}
-          ordenes={ordenes}
-          prendas={prendas}
-          remisiones={remisiones}
-          calcularProgresoOrden={calcularProgresoOrden}
-          onSeleccionarOrden={handleSeleccionarOrden}
-          onSubmit={handleSubmit}
-        />
+    <div className="space-y-6 animate-slide-up">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Remisiones</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Despachos y trazabilidad de órdenes</p>
+        </div>
+        <span className="badge-brand text-sm px-3 py-1.5 font-semibold">{remisiones.length} remisiones</span>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-bold mb-4">Historial de Remisiones</h2>
+      <div className="card-p">
+        <div className="flex items-center gap-2 mb-5">
+          <div className="w-1 h-5 bg-brand-600 rounded-full" />
+          <h2 className="text-sm font-semibold text-slate-800">Nueva remisión / despacho</h2>
+        </div>
+        <FormularioRemision formRemision={formRemision} setFormRemision={setFormRemision} ordenes={ordenes} prendas={prendas} remisiones={remisiones} calcularProgresoOrden={calcularProgresoOrden} onSeleccionarOrden={handleSeleccionarOrden} onSubmit={handleSubmit} />
+      </div>
 
-        {remisiones.length > 0 && (
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => {
-                const todasExpandidas = {};
-                remisiones.forEach(r => todasExpandidas[r.id] = true);
-                setRemisionesExpandidas(todasExpandidas);
-              }}
-              className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-            >
-              Expandir todas
-            </button>
-            <button
-              onClick={() => setRemisionesExpandidas({})}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-            >
-              Colapsar todas
-            </button>
-          </div>
-        )}
+      <div className="card-p space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-800">Historial de remisiones</h2>
+          {remisiones.length > 0 && (
+            <div className="flex gap-2">
+              <button onClick={() => { const t = {}; remisiones.forEach(r => t[r.id] = true); setRemisionesExpandidas(t); }} className="btn-ghost text-xs py-1 px-2">Expandir todas</button>
+              <button onClick={() => setRemisionesExpandidas({})} className="btn-ghost text-xs py-1 px-2">Colapsar</button>
+            </div>
+          )}
+        </div>
 
         {remisiones.length > 0 ? (
           <div className="space-y-3">
@@ -414,21 +393,19 @@ const VistaRemisiones = ({
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-gray-500">
-            <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p>No hay remisiones registradas</p>
-            <p className="text-sm mt-2">Crea la primera remisión usando el formulario arriba</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+              <Package className="w-7 h-7 text-slate-400" />
+            </div>
+            <p className="text-slate-600 font-medium">Sin remisiones registradas</p>
+            <p className="text-slate-400 text-sm mt-1">Crea la primera remisión con el formulario</p>
           </div>
         )}
       </div>
 
-      <TablaTrazabilidad
-        ordenes={ordenes}
-        prendas={prendas}
-        remisiones={remisiones}
-        calcularProgresoOrden={calcularProgresoOrden}
-        asignaciones={asignaciones}
-      />
+      <TablaTrazabilidad ordenes={ordenes} prendas={prendas} remisiones={remisiones} calcularProgresoOrden={calcularProgresoOrden} asignaciones={asignaciones} />
+
+      <ModalConfirmar isOpen={modalEliminar.isOpen} onClose={modalEliminar.cerrar} onConfirm={handleEliminar} titulo="¿Eliminar remisión?" mensaje="Esta acción eliminará la remisión permanentemente." tipo="danger" />
     </div>
   );
 };

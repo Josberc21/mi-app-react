@@ -101,26 +101,16 @@ const VistaPrendas = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-purple-100 rounded-lg">
-            <Package className="w-8 h-8 text-purple-600" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Gestión de Prendas</h2>
-            <p className="text-gray-600">Administra el catálogo de productos</p>
-          </div>
+    <div className="space-y-6 animate-slide-up">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Prendas</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Catálogo de productos</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-600">Total prendas</p>
-          <p className="text-3xl font-bold text-purple-600">{prendas.length}</p>
-        </div>
+        <span className="badge-brand text-sm px-3 py-1.5 font-semibold">{prendas.length} registradas</span>
       </div>
 
-      {/* Formulario */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="card-p">
         <FormularioPrenda
           formData={formData}
           onChange={handleChange}
@@ -131,25 +121,24 @@ const VistaPrendas = ({
         />
       </div>
 
-      {/* Tabla */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold mb-4">Catálogo de Prendas</h3>
-        
+      <div className="card-p space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-800">Catálogo de prendas</h2>
+          <span className="text-xs text-slate-400">{datosFiltrados.length} resultado{datosFiltrados.length !== 1 ? 's' : ''}</span>
+        </div>
         <CampoBusqueda
           valor={busqueda}
           onChange={setBusqueda}
-          placeholder="🔍 Buscar por ID, referencia o descripción..."
+          placeholder="Buscar por ID, referencia o descripción..."
           totalResultados={datosFiltrados.length}
           totalItems={prendas.length}
         />
-
         <TablaPrendas
           prendas={datosPaginados}
           operaciones={operaciones}
           onEditar={handleEditar}
           onEliminar={(id) => modalEliminar.abrir(id)}
         />
-
         <Paginacion
           paginaActual={paginaActual}
           totalPaginas={totalPaginas}
@@ -161,13 +150,12 @@ const VistaPrendas = ({
         />
       </div>
 
-      {/* Modal de confirmación */}
       <ModalConfirmar
         isOpen={modalEliminar.isOpen}
         onClose={modalEliminar.cerrar}
         onConfirm={handleEliminar}
         titulo="¿Eliminar prenda?"
-        mensaje="Esta acción marcará la prenda como inactiva. Las operaciones asociadas se mantendrán."
+        mensaje="Esta acción marcará la prenda como inactiva. Las operaciones asociadas se conservan."
         tipo="danger"
       />
     </div>

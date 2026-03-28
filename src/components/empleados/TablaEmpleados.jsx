@@ -1,18 +1,7 @@
-// src/components/empleados/TablaEmpleados.jsx
 import React from 'react';
-import { Edit, Trash2, DollarSign } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
-import { Download, QrCode } from 'lucide-react';
+import { Edit, Trash2, QrCode, DollarSign, Users } from 'lucide-react';
 
-
-const TablaEmpleados = ({ 
-  empleados, 
-  onEditar, 
-  onEliminar,
-  calcularNomina 
-}) => {
-
-  // ✅ Nueva función para generar el QR con opción de imprimir y descargar
+const TablaEmpleados = ({ empleados, onEditar, onEliminar, calcularNomina }) => {
   const generarQRParaImprimir = (empleado) => {
     const url = `${window.location.origin}/operario/${empleado.id}`;
     const ventana = window.open('', '', 'width=500,height=700');
@@ -23,118 +12,48 @@ const TablaEmpleados = ({
           <meta charset="UTF-8">
           <title>QR - ${empleado.nombre}</title>
           <style>
-            body {
-              font-family: Arial, sans-serif;
-              text-align: center;
-              padding: 40px;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-              margin: 0;
-            }
-            .container {
-              background: white;
-              color: #333;
-              padding: 30px;
-              border-radius: 20px;
-              max-width: 400px;
-              margin: 0 auto;
-              box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            }
-            h1 {
-              font-size: 28px;
-              margin-bottom: 10px;
-              color: #667eea;
-            }
-            .id {
-              font-size: 20px;
-              color: #666;
-              margin-bottom: 30px;
-              font-weight: bold;
-            }
-            .qr-container {
-              background: white;
-              padding: 20px;
-              border-radius: 15px;
-              display: inline-block;
-              margin: 20px 0;
-            }
-            .instructions {
-              font-size: 16px;
-              color: #666;
-              margin-top: 20px;
-              line-height: 1.6;
-            }
-            .btns {
-              display: flex;
-              justify-content: center;
-              gap: 15px;
-              margin-top: 30px;
-            }
-            button {
-              background: #667eea;
-              color: white;
-              border: none;
-              padding: 12px 30px;
-              font-size: 16px;
-              border-radius: 10px;
-              cursor: pointer;
-              font-weight: bold;
-              transition: background 0.3s;
-            }
-            button:hover {
-              background: #764ba2;
-            }
-            @media print {
-              body { background: white; padding: 20px; }
-              .btns { display: none; }
-            }
+            body { font-family: 'Inter', Arial, sans-serif; text-align: center; padding: 40px; background: #0b0f1a; margin: 0; }
+            .container { background: white; padding: 36px; border-radius: 20px; max-width: 380px; margin: 0 auto; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+            .badge { display: inline-block; background: #eef2ff; color: #4f46e5; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-bottom: 16px; }
+            h1 { font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 6px; }
+            .id { font-size: 14px; color: #94a3b8; margin-bottom: 24px; }
+            .qr-container { background: #f8fafc; padding: 20px; border-radius: 16px; display: inline-block; margin: 8px 0 24px; border: 1px solid #e2e8f0; }
+            .instructions { font-size: 13px; color: #64748b; line-height: 1.7; text-align: left; background: #f8fafc; border-radius: 12px; padding: 16px; }
+            .url { font-size: 11px; color: #94a3b8; word-break: break-all; margin-top: 12px; }
+            .btns { display: flex; justify-content: center; gap: 12px; margin-top: 24px; }
+            button { background: #4f46e5; color: white; border: none; padding: 10px 24px; font-size: 14px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+            button:hover { background: #4338ca; }
+            @media print { body { background: white; } .btns { display: none; } }
           </style>
         </head>
         <body>
           <div class="container">
+            <span class="badge">Operario</span>
             <h1>${empleado.nombre}</h1>
-            <p class="id">ID: ${empleado.id}</p>
-            
-            <div class="qr-container">
-              <div id="qr"></div>
-            </div>
-            
+            <p class="id">ID: ${empleado.id} · ${empleado.telefono || ''}</p>
+            <div class="qr-container"><div id="qr"></div></div>
             <div class="instructions">
-              <p><strong>📱 Cómo usar:</strong></p>
-              <p>1. Pega este QR en tu máquina</p>
-              <p>2. Escanea con tu celular</p>
-              <p>3. Ve tus asignaciones al instante</p>
-              <p style="margin-top: 20px; font-size: 14px; color: #999;">
-                ${url}
-              </p>
+              <strong>Cómo usar:</strong><br/>
+              1. Imprime y pega este QR en tu máquina<br/>
+              2. Escanea con tu celular<br/>
+              3. Ve tus asignaciones al instante
+              <div class="url">${url}</div>
             </div>
-
             <div class="btns">
-              <button onclick="window.print()">🖨️ Imprimir</button>
-              <button id="descargarQR">⬇️ Descargar QR</button>
+              <button onclick="window.print()">Imprimir</button>
+              <button id="dl">Descargar QR</button>
             </div>
           </div>
-          
           <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
           <script>
-            const qrDiv = document.getElementById("qr");
-            const qr = new QRCode(qrDiv, {
-              text: "${url}",
-              width: 250,
-              height: 250,
-              colorDark: "#667eea",
-              colorLight: "#ffffff",
-              correctLevel: QRCode.CorrectLevel.H
-            });
-
-            // Esperar a que el QR se genere y luego habilitar descarga
+            const qr = new QRCode(document.getElementById("qr"), { text: "${url}", width: 220, height: 220, colorDark: "#4f46e5", colorLight: "#f8fafc", correctLevel: QRCode.CorrectLevel.H });
             setTimeout(() => {
-              const canvas = qrDiv.querySelector("canvas");
-              document.getElementById("descargarQR").addEventListener("click", () => {
-                const enlace = document.createElement("a");
-                enlace.href = canvas.toDataURL("image/png");
-                enlace.download = "QR_${empleado.nombre.replace(/\\s+/g, '_')}.png";
-                enlace.click();
+              const canvas = document.getElementById("qr").querySelector("canvas");
+              document.getElementById("dl").addEventListener("click", () => {
+                const a = document.createElement("a");
+                a.href = canvas.toDataURL("image/png");
+                a.download = "QR_${empleado.nombre.replace(/\s+/g, '_')}.png";
+                a.click();
               });
             }, 500);
           </script>
@@ -145,62 +64,66 @@ const TablaEmpleados = ({
 
   if (empleados.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <p className="text-lg">No hay empleados registrados</p>
-        <p className="text-sm mt-2">Agrega el primer empleado usando el formulario arriba</p>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+          <Users className="w-7 h-7 text-slate-400" />
+        </div>
+        <p className="text-slate-600 font-medium">No hay empleados registrados</p>
+        <p className="text-slate-400 text-sm mt-1">Agrega el primer empleado con el formulario</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto -mx-6 px-6">
+      <table className="table-base min-w-[600px]">
+        <thead>
           <tr>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nombre</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Teléfono</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nómina Acumulada</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Acciones</th>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Nómina acumulada</th>
+            <th>Acciones</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200">
-          {empleados.map(empleado => {
-            const nomina = calcularNomina(empleado.id);
-            
+        <tbody>
+          {empleados.map((emp) => {
+            const nomina = calcularNomina(emp.id);
             return (
-              <tr key={empleado.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{empleado.id}</td>
-                <td className="px-4 py-3 text-sm text-gray-900">{empleado.nombre}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{empleado.telefono}</td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-                    <DollarSign className="w-4 h-4 mr-1" />
-                    ${nomina.toLocaleString()}
+              <tr key={emp.id}>
+                <td>
+                  <span className="badge-slate font-mono text-xs">{emp.id}</span>
+                </td>
+                <td className="font-medium text-slate-900">{emp.nombre}</td>
+                <td className="text-slate-500">{emp.telefono}</td>
+                <td>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-semibold">
+                    <DollarSign className="w-3.5 h-3.5" />
+                    {nomina.toLocaleString()}
                   </span>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2">
+                <td>
+                  <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => onEditar(empleado)}
-                      className="p-2 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
+                      onClick={() => onEditar(emp)}
                       title="Editar"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors"
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => onEliminar(empleado.id)}
-                      className="p-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                      onClick={() => onEliminar(emp.id)}
                       title="Eliminar"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => generarQRParaImprimir(empleado)}
-                      className="p-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+                      onClick={() => generarQRParaImprimir(emp)}
                       title="Generar QR"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-brand-600 bg-brand-50 hover:bg-brand-100 transition-colors"
                     >
-                      <QrCode className="w-4 h-4" />
+                      <QrCode className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </td>

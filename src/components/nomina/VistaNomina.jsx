@@ -150,21 +150,12 @@ const VistaNomina = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-green-100 rounded-lg">
-            <DollarSign className="w-8 h-8 text-green-600" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Cálculo de Nómina</h2>
-            <p className="text-gray-600">Genera reportes de pago por período</p>
-          </div>
-        </div>
+    <div className="space-y-6 animate-slide-up">
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Nómina</h1>
+        <p className="text-slate-500 text-sm mt-0.5">Genera reportes de pago por período</p>
       </div>
 
-      {/* Filtros */}
       <FiltrosNomina
         filtroFechaInicio={filtroFechaInicio}
         filtroFechaFin={filtroFechaFin}
@@ -175,46 +166,35 @@ const VistaNomina = ({
         onRangoRapido={setRangoRapido}
       />
 
-      {/* Resultados */}
       {nominaFiltrada && nominaFiltrada.length > 0 ? (
-        <ResumenNomina
-          nominaFiltrada={nominaFiltrada}
-          filtroFechaInicio={filtroFechaInicio}
-          filtroFechaFin={filtroFechaFin}
-          onExportar={exportarNominaExcel}
-        >
-          {/* Detalle por empleado */}
+        <ResumenNomina nominaFiltrada={nominaFiltrada} filtroFechaInicio={filtroFechaInicio} filtroFechaFin={filtroFechaFin} onExportar={exportarNominaExcel}>
           {nominaFiltrada.map(emp => {
             const asignacionesDetalle = asignaciones.filter(a => {
               if (!a.completado || !a.fecha_terminado || a.empleado_id !== emp.id) return false;
-              const fechaTerm = new Date(a.fecha_terminado);
+              const fechaTerm  = new Date(a.fecha_terminado);
               const fechaInicio = new Date(filtroFechaInicio);
-              const fechaFin = new Date(filtroFechaFin);
+              const fechaFin   = new Date(filtroFechaFin);
               return fechaTerm >= fechaInicio && fechaTerm <= fechaFin;
             });
-
-            return (
-              <TablaDetalleEmpleado
-                key={emp.id}
-                empleado={emp}
-                asignaciones={asignacionesDetalle}
-                operaciones={operaciones}
-                prendas={prendas}
-              />
-            );
+            return <TablaDetalleEmpleado key={emp.id} empleado={emp} asignaciones={asignacionesDetalle} operaciones={operaciones} prendas={prendas} />;
           })}
         </ResumenNomina>
       ) : nominaFiltrada && nominaFiltrada.length === 0 ? (
-        <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg">
-          <p className="text-yellow-800 font-semibold">
-            No hay empleados con pagos pendientes en el período seleccionado.
+        <div className="card-p flex items-start gap-3 border-l-4 border-amber-400 bg-amber-50">
+          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <DollarSign className="w-4 h-4 text-amber-600" />
+          </div>
+          <p className="text-amber-800 text-sm font-medium pt-1">
+            No hay empleados con pagos en el período seleccionado.
           </p>
         </div>
       ) : (
-        <div className="bg-gray-50 rounded-lg p-12 text-center">
-          <DollarSign className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 text-lg">Seleccione un rango de fechas y haga clic en "Calcular Nómina"</p>
-          <p className="text-gray-500 text-sm mt-2">Los resultados se mostrarán aquí</p>
+        <div className="card flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+            <DollarSign className="w-8 h-8 text-slate-400" />
+          </div>
+          <p className="text-slate-600 font-medium">Selecciona un rango de fechas</p>
+          <p className="text-slate-400 text-sm mt-1">y haz clic en "Calcular nómina"</p>
         </div>
       )}
     </div>

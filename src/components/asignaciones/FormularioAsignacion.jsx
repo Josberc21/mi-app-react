@@ -1,224 +1,198 @@
 import React, { useMemo } from 'react';
+import { Plus, Info } from 'lucide-react';
 
-const FormularioAsignacion = ({ 
-  formAsig, 
-  setFormAsig, 
-  empleados, 
-  prendas, 
-  operaciones, 
+const FormularioAsignacion = ({
+  formAsig,
+  setFormAsig,
+  empleados,
+  prendas,
+  operaciones,
   ordenes,
   asignaciones,
   onSeleccionarOrden,
-  onSubmit 
+  onSubmit,
 }) => {
-  // Calcular disponibilidad de cada operación para la orden seleccionada
   const disponibilidadOperaciones = useMemo(() => {
     if (!formAsig.orden_id || !formAsig.prenda_id) return {};
-
-    const orden = ordenes.find(o => o.id === parseInt(formAsig.orden_id));
+    const orden = ordenes.find((o) => o.id === parseInt(formAsig.orden_id));
     if (!orden) return {};
 
-    const operacionesPrenda = operaciones.filter(op => op.prenda_id === parseInt(formAsig.prenda_id));
-    
+    const operacionesPrenda = operaciones.filter((op) => op.prenda_id === parseInt(formAsig.prenda_id));
     const disponibilidad = {};
-    
-    operacionesPrenda.forEach(op => {
-      const asignacionesOp = asignaciones.filter(a =>
-        a.orden_id === orden.id && a.operacion_id === op.id
+
+    operacionesPrenda.forEach((op) => {
+      const asignacionesOp = asignaciones.filter(
+        (a) => a.orden_id === orden.id && a.operacion_id === op.id
       );
-      
       const yaAsignadas = asignacionesOp.reduce((sum, a) => sum + Number(a.cantidad || 0), 0);
-      const disponibles = orden.cantidad_total - yaAsignadas;
-      
       disponibilidad[op.id] = {
         asignadas: yaAsignadas,
-        disponibles: disponibles,
-        total: orden.cantidad_total
+        disponibles: orden.cantidad_total - yaAsignadas,
+        total: orden.cantidad_total,
       };
     });
-    
+
     return disponibilidad;
   }, [formAsig.orden_id, formAsig.prenda_id, ordenes, operaciones, asignaciones]);
 
+  const dispOp = formAsig.operacion_id ? disponibilidadOperaciones[formAsig.operacion_id] : null;
+
   return (
-    <form onSubmit={onSubmit}>
-      <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          1. Seleccionar Orden de Producción
+    <form onSubmit={onSubmit} className="space-y-4">
+      {/* Paso 1 — Orden */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+          <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">1</span>
+          Orden de producción
         </label>
         <select
           value={formAsig.orden_id}
           onChange={(e) => onSeleccionarOrden(e.target.value)}
-         className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+          className="input-base"
         >
-          <option value="">-- Seleccione una orden --</option>
+          <option value="">— Selecciona una orden —</option>
           {ordenes
-            .filter(o => o.activo)
-            .map(o => {
-              const prenda = prendas.find(p => p.id === o.prenda_id);
-              const operacionesRequeridas = operaciones.filter(op => op.prenda_id === o.prenda_id);
-              
-              // Calcular progreso simple (piezas completamente terminadas)
-              const completadas = Math.min(
-                ...operacionesRequeridas.map(op => {
-                  const asigs = asignaciones.filter(a => 
-                    a.orden_id === o.id && 
-                    a.operacion_id === op.id && 
-                    a.completado
-                  );
-                  return asigs.reduce((sum, a) => sum + Number(a.cantidad || 0), 0);
-                })
-              );
-
+            .filter((o) => o.activo)
+            .map((o) => {
+              const prenda = prendas.find((p) => p.id === o.prenda_id);
+              const ops = operaciones.filter((op) => op.prenda_id === o.prenda_id);
+              const completadas = ops.length > 0
+                ? Math.min(...ops.map((op) => {
+                    const asigs = asignaciones.filter(
+                      (a) => a.orden_id === o.id && a.operacion_id === op.id && a.completado
+                    );
+                    return asigs.reduce((s, a) => s + Number(a.cantidad || 0), 0);
+                  }))
+                : 0;
               return (
-                <option 
-  key={o.id} 
-  value={o.id}
-  style={{
-    backgroundColor: o.id % 2 === 0 ? '#f9fafb' : '#ffffff',
-    padding: '8px'
-  }}
->
-                 {o.numero_orden} - {prenda?.referencia} - {o.color} - Talla {o.talla} ({completadas}/{o.cantidad_total} completas)
+                <option key={o.id} value={o.id}>
+                  {o.numero_orden} · {prenda?.referencia} · {o.color} · T{o.talla} ({completadas}/{o.cantidad_total})
                 </option>
               );
             })}
         </select>
+
         {formAsig.orden_id && (
-          <p className="text-xs text-gray-600 mt-2">
-            ✓ Prenda, color y talla se asignan automáticamente según la orden
-          </p>
+          <div className="flex items-center gap-2 px-3 py-2 bg-brand-50 border border-brand-100 rounded-xl text-xs text-brand-700">
+            <Info className="w-3.5 h-3.5 flex-shrink-0" />
+            Prenda, color y talla se autocompletaron desde la orden
+            {formAsig.color && (
+              <span className="ml-auto flex gap-2">
+                <span className="badge-blue">{formAsig.talla}</span>
+                <span className="badge-slate">{formAsig.color}</span>
+              </span>
+            )}
+          </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            2. Empleado
+      {/* Pasos 2–5 en grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Empleado */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">2</span>
+            Empleado
           </label>
           <select
             value={formAsig.empleado_id}
             onChange={(e) => setFormAsig({ ...formAsig, empleado_id: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="input-base"
             disabled={!formAsig.orden_id}
           >
-            <option value="">Seleccione</option>
-            {empleados.map(emp => (
+            <option value="">Selecciona</option>
+            {empleados.map((emp) => (
               <option key={emp.id} value={emp.id}>
-                ID:{emp.id} {emp.nombre}
+                {emp.nombre}
               </option>
             ))}
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            3. Prenda
+        {/* Prenda (readonly) */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-full bg-slate-300 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">3</span>
+            Prenda
           </label>
           <input
             type="text"
-            value={prendas.find(p => p.id === parseInt(formAsig.prenda_id))?.referencia || ''}
-            className="w-full px-3 py-2 border rounded-lg bg-gray-100"
+            value={prendas.find((p) => p.id === parseInt(formAsig.prenda_id))?.referencia || ''}
+            className="input-base bg-slate-50 text-slate-500 cursor-not-allowed"
             disabled
-            placeholder="Se asigna por orden"
+            placeholder="De la orden"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            4. Operación
+        {/* Operación */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">4</span>
+            Operación
           </label>
           <select
             value={formAsig.operacion_id}
             onChange={(e) => setFormAsig({ ...formAsig, operacion_id: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg text-sm"
+            className="input-base"
             disabled={!formAsig.prenda_id}
           >
-            <option value="">Seleccione</option>
+            <option value="">Selecciona</option>
             {operaciones
-              .filter(op => op.prenda_id === parseInt(formAsig.prenda_id))
-              .map(op => {
+              .filter((op) => op.prenda_id === parseInt(formAsig.prenda_id))
+              .map((op) => {
                 const disp = disponibilidadOperaciones[op.id];
-                const disponibles = disp?.disponibles || 0;
-                const asignadas = disp?.asignadas || 0;
-                const total = disp?.total || 0;
-                
+                const disponibles = disp?.disponibles ?? 0;
                 return (
-                  <option 
-  key={op.id} 
-  value={op.id}
-  disabled={disponibles === 0}
-  style={{
-    backgroundColor: disponibles === 0 ? '#fee2e2' : (op.id % 2 === 0 ? '#f9fafb' : '#ffffff'),
-    color: disponibles === 0 ? '#991b1b' : '#111827',
-    fontWeight: disponibles === 0 ? '500' : 'normal',
-    padding: '8px'
-  }}
->
-                    {op.nombre} - ${op.costo} 
-                    {disp && ` | ${asignadas}/${total} asignadas (${disponibles} disponibles)`}
+                  <option key={op.id} value={op.id} disabled={disponibles === 0}>
+                    {op.nombre} · ${op.costo}
+                    {disp ? ` (${disponibles} disp.)` : ''}
                   </option>
                 );
               })}
           </select>
-          
-          {/* Info visual de disponibilidad */}
-          {formAsig.operacion_id && disponibilidadOperaciones[formAsig.operacion_id] && (
-            <div className="mt-1 p-2 bg-green-50 rounded text-xs">
-              <div className="flex justify-between">
-                <span className="font-semibold text-green-800">Disponibles:</span>
-                <span className="font-bold text-green-600">
-                  {disponibilidadOperaciones[formAsig.operacion_id].disponibles} piezas
-                </span>
-              </div>
-              <div className="flex justify-between text-gray-600 mt-1">
-                <span>Ya asignadas:</span>
-                <span>
-                  {disponibilidadOperaciones[formAsig.operacion_id].asignadas} de {disponibilidadOperaciones[formAsig.operacion_id].total}
-                </span>
-              </div>
+          {dispOp && (
+            <div className="flex items-center justify-between text-xs px-1">
+              <span className="text-slate-500">Disponibles:</span>
+              <span className={`font-semibold ${dispOp.disponibles > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {dispOp.disponibles} / {dispOp.total}
+              </span>
             </div>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            5. Cantidad
+        {/* Cantidad */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">5</span>
+            Cantidad
           </label>
           <input
             type="number"
             value={formAsig.cantidad}
             onChange={(e) => setFormAsig({ ...formAsig, cantidad: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="input-base"
             placeholder="50"
             min="1"
             max={formAsig.operacion_id ? disponibilidadOperaciones[formAsig.operacion_id]?.disponibles : undefined}
             disabled={!formAsig.operacion_id}
           />
-          {formAsig.operacion_id && disponibilidadOperaciones[formAsig.operacion_id] && (
-            <p className="text-xs text-gray-500 mt-1">
-              Máximo: {disponibilidadOperaciones[formAsig.operacion_id].disponibles}
-            </p>
+          {dispOp && (
+            <p className="text-xs text-slate-400 px-1">Máx: {dispOp.disponibles}</p>
           )}
         </div>
 
+        {/* Submit */}
         <div className="flex items-end">
           <button
             type="submit"
             disabled={!formAsig.orden_id}
-            className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+            className="btn-primary w-full"
           >
+            <Plus className="w-4 h-4" />
             Asignar
           </button>
         </div>
       </div>
-
-      {formAsig.orden_id && (
-        <div className="mt-4 p-3 bg-gray-50 rounded text-sm">
-          <p><strong>Color:</strong> {formAsig.color}</p>
-          <p><strong>Talla:</strong> {formAsig.talla}</p>
-        </div>
-      )}
     </form>
   );
 };

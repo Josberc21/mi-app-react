@@ -146,116 +146,57 @@ const VistaOperaciones = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-orange-100 rounded-lg">
-            <Settings className="w-8 h-8 text-orange-600" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Gestión de Operaciones</h2>
-            <p className="text-gray-600">Administra las operaciones y sus costos</p>
-          </div>
+    <div className="space-y-6 animate-slide-up">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Operaciones</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Operaciones y costos de confección</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-600">Total operaciones</p>
-          <p className="text-3xl font-bold text-orange-600">{operaciones.length}</p>
-        </div>
+        <span className="badge-brand text-sm px-3 py-1.5 font-semibold">{operaciones.length} registradas</span>
       </div>
 
-      {/* Formulario Manual */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">
-            {editando ? 'Editar Operación' : 'Nueva Operación'}
-          </h3>
+      <div className="card-p">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-5 bg-brand-600 rounded-full" />
+            <h2 className="text-sm font-semibold text-slate-800">
+              {editando ? 'Editar operación' : 'Nueva operación'}
+            </h2>
+          </div>
           <button
             onClick={() => setMostrarCargaMasiva(!mostrarCargaMasiva)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${mostrarCargaMasiva
-                ? 'bg-gray-200 text-gray-700'
-                : 'bg-purple-600 text-white hover:bg-purple-700'
-              }`}
+            className={mostrarCargaMasiva ? 'btn-secondary' : 'btn-primary'}
           >
-            <Upload className="w-5 h-5" />
-            {mostrarCargaMasiva ? 'Ocultar Carga Masiva' : 'Carga Masiva Excel'}
+            <Upload className="w-4 h-4" />
+            {mostrarCargaMasiva ? 'Formulario manual' : 'Carga masiva Excel'}
           </button>
         </div>
-
-        {/* Mostrar carga masiva o formulario manual */}
         {mostrarCargaMasiva ? (
-          <CargaMasiva
-            onExito={mostrarExito}
-            onError={mostrarError}
-            onInfo={mostrarInfo}
-            recargarDatos={recargarDatos}
-          />
+          <CargaMasiva onExito={mostrarExito} onError={mostrarError} onInfo={mostrarInfo} recargarDatos={recargarDatos} />
         ) : (
-          <FormularioOperacion
-            formData={formData}
-            prendas={prendas}
-            onChange={handleChange}
-            onSubmit={handleSubmit}
-            onCancelar={handleCancelar}
-            editando={!!editando}
-            loading={guardando}
-          />
+          <FormularioOperacion formData={formData} prendas={prendas} onChange={handleChange} onSubmit={handleSubmit} onCancelar={handleCancelar} editando={!!editando} loading={guardando} />
         )}
       </div>
 
-      {/* Tabla */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold mb-4">Catálogo de Operaciones</h3>
-        {ordenCosto && (
-          <div className="mb-3 p-2 bg-blue-50 rounded text-sm text-blue-800">
-            <strong>Ordenando por:</strong> {
-              ordenCosto === 'menor' ? 'Costo menor a mayor ↑' : 'Costo mayor a menor ↓'
-            }
-            <button
-              onClick={() => setOrdenCosto(null)}
-              className="ml-2 underline hover:no-underline"
-            >
-              Quitar orden
-            </button>
+      <div className="card-p space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-800">Catálogo de operaciones</h2>
+          <div className="flex items-center gap-2">
+            {ordenCosto && (
+              <button onClick={() => setOrdenCosto(null)} className="flex items-center gap-1 text-xs text-brand-600 bg-brand-50 px-2.5 py-1 rounded-lg hover:bg-brand-100 transition-colors">
+                Por costo: {ordenCosto === 'menor' ? '↑' : '↓'}
+                <span className="text-brand-400">×</span>
+              </button>
+            )}
+            <span className="text-xs text-slate-400">{operacionesOrdenadas.length} resultado{operacionesOrdenadas.length !== 1 ? 's' : ''}</span>
           </div>
-        )}
-        <CampoBusqueda
-          valor={busqueda}
-          onChange={setBusqueda}
-          placeholder="🔍 Buscar por ID, nombre de operación, costo o prenda..."
-          totalResultados={datosFiltrados.length}
-          totalItems={operaciones.length}
-        />
-
-        <TablaOperaciones
-          operaciones={datosPaginados}
-          prendas={prendas}
-          onEditar={handleEditar}
-          onEliminar={(id) => modalEliminar.abrir(id)}
-          ordenCosto={ordenCosto}
-          onCambiarOrdenCosto={handleCambiarOrdenCosto}
-        />
-
-        <Paginacion
-          paginaActual={paginaActual}
-          totalPaginas={totalPaginas}
-          totalItems={operacionesOrdenadas.length}
-          primeraPagina={primeraPagina}
-          paginaAnterior={paginaAnterior}
-          paginaSiguiente={paginaSiguiente}
-          ultimaPagina={ultimaPagina}
-        />
+        </div>
+        <CampoBusqueda valor={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, costo o prenda..." totalResultados={datosFiltrados.length} totalItems={operaciones.length} />
+        <TablaOperaciones operaciones={datosPaginados} prendas={prendas} onEditar={handleEditar} onEliminar={(id) => modalEliminar.abrir(id)} ordenCosto={ordenCosto} onCambiarOrdenCosto={handleCambiarOrdenCosto} />
+        <Paginacion paginaActual={paginaActual} totalPaginas={totalPaginas} totalItems={operacionesOrdenadas.length} primeraPagina={primeraPagina} paginaAnterior={paginaAnterior} paginaSiguiente={paginaSiguiente} ultimaPagina={ultimaPagina} />
       </div>
 
-      {/* Modal de confirmación */}
-      <ModalConfirmar
-        isOpen={modalEliminar.isOpen}
-        onClose={modalEliminar.cerrar}
-        onConfirm={handleEliminar}
-        titulo="¿Eliminar operación?"
-        mensaje="Esta acción marcará la operación como inactiva. Las asignaciones históricas se mantendrán."
-        tipo="danger"
-      />
+      <ModalConfirmar isOpen={modalEliminar.isOpen} onClose={modalEliminar.cerrar} onConfirm={handleEliminar} titulo="¿Eliminar operación?" mensaje="Esta acción marcará la operación como inactiva. Las asignaciones históricas se conservan." tipo="danger" />
     </div>
   );
 };
