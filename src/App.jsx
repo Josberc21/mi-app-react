@@ -1,44 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, NavLink, Outlet } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import {
-  User, Package, Settings, BarChart3, CircleDollarSign, SquareScissors,
-  LogOut, Shirt, PencilRuler, Truck, Monitor, ChevronRight, Scissors,
+  BrowserRouter, Routes, Route, Navigate,
+  useNavigate, useLocation, NavLink, Outlet
+} from 'react-router-dom';
+import {
+  User, LogOut, Shirt, PencilRuler, Truck, Scissors,
   LayoutDashboard, Users, ClipboardList, ShoppingBag, DollarSign,
-  Factory, Tv2, Eye, EyeOff, AlertCircle
+  Factory, Tv2, Eye, EyeOff, AlertCircle, Menu, X, ChevronRight
 } from 'lucide-react';
 import { iniciarSesion, cerrarSesion, obtenerUsuarioActual } from './services/authService';
 import { supabase } from './supabaseClient';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import OfflineBanner from './components/common/OfflineBanner';
+import OfflineBanner   from './components/common/OfflineBanner';
+import ErrorBoundary   from './components/common/ErrorBoundary';
+import PageSkeleton    from './components/common/PageSkeleton';
+import Pagina404       from './components/common/Pagina404';
 
-import { useToast }   from './hooks/useToast';
-import { useDatos }   from './hooks/useDatos';
+import { useToast }    from './hooks/useToast';
+import { useDatos }    from './hooks/useDatos';
 import { useCalculos } from './hooks/useCalculos';
 
 import Toast   from './components/common/Toast';
 import Loading from './components/common/Loading';
 
-import VistaEmpleados    from './components/empleados/VistaEmpleados';
-import VistaPrendas      from './components/prendas/VistaPrendas';
-import VistaOperaciones  from './components/operaciones/VistaOperaciones';
-import VistaOrdenes      from './components/ordenes/VistaOrdenes';
-import VistaAsignaciones from './components/asignaciones/VistaAsignaciones';
-import VistaRemisiones   from './components/remisiones/VistaRemisiones';
-import VistaNomina       from './components/nomina/VistaNomina';
-import VistaOperarioPublica from './components/operario/VistaOperarioPublica';
-import VistaDashboard    from './components/dashboard/VistaDashboard';
-import PantallaTallerAdmin from './components/taller/PantallaTallerAdmin';
-import PantallaTallerTV  from './components/taller/PantallaTallerTV';
+// ── Lazy imports — code splitting ──────────────────────────────────
+const VistaEmpleados      = React.lazy(() => import('./components/empleados/VistaEmpleados'));
+const VistaPrendas        = React.lazy(() => import('./components/prendas/VistaPrendas'));
+const VistaOperaciones    = React.lazy(() => import('./components/operaciones/VistaOperaciones'));
+const VistaOrdenes        = React.lazy(() => import('./components/ordenes/VistaOrdenes'));
+const VistaAsignaciones   = React.lazy(() => import('./components/asignaciones/VistaAsignaciones'));
+const VistaRemisiones     = React.lazy(() => import('./components/remisiones/VistaRemisiones'));
+const VistaNomina         = React.lazy(() => import('./components/nomina/VistaNomina'));
+const VistaOperarioPublica = React.lazy(() => import('./components/operario/VistaOperarioPublica'));
+const VistaDashboard      = React.lazy(() => import('./components/dashboard/VistaDashboard'));
+const PantallaTallerAdmin = React.lazy(() => import('./components/taller/PantallaTallerAdmin'));
+const PantallaTallerTV    = React.lazy(() => import('./components/taller/PantallaTallerTV'));
 
 // ===================================================================
 // LOGIN
 // ===================================================================
 const Login = ({ handleLogin, toast, cerrarToast }) => {
-  const [loginId, setLoginId]           = useState('');
-  const [loginPass, setLoginPass]       = useState('');
-  const [mostrarPass, setMostrarPass]   = useState(false);
-  const [cargando, setCargando]         = useState(false);
-  const [error, setError]               = useState('');
+  const [loginId, setLoginId]         = useState('');
+  const [loginPass, setLoginPass]     = useState('');
+  const [mostrarPass, setMostrarPass] = useState(false);
+  const [cargando, setCargando]       = useState(false);
+  const [error, setError]             = useState('');
 
   const onSubmit = async (e) => {
     e?.preventDefault();
@@ -56,13 +62,11 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
     <div className="min-h-screen flex bg-sidebar-bg">
       <Toast toast={toast} onClose={cerrarToast} />
 
-      {/* ── Panel izquierdo (branding) ── */}
+      {/* Panel izquierdo (branding) */}
       <div className="hidden lg:flex lg:w-[52%] flex-col justify-between p-12 bg-grid-pattern relative overflow-hidden">
-        {/* Glow accent */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-brand-600/10 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-brand-900/20 blur-[80px] pointer-events-none" />
 
-        {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
           <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg">
             <Scissors className="w-5 h-5 text-white" />
@@ -70,7 +74,6 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
           <span className="text-white font-semibold text-lg tracking-tight">SistemaProd</span>
         </div>
 
-        {/* Tagline central */}
         <div className="relative z-10 space-y-5">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-soft" />
@@ -85,12 +88,11 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
           </p>
         </div>
 
-        {/* Features bottom */}
         <div className="relative z-10 grid grid-cols-3 gap-3">
           {[
             { icon: ClipboardList, label: 'Asignaciones' },
-            { icon: DollarSign,    label: 'Nómina'       },
-            { icon: BarChart3,     label: 'Dashboard'    },
+            { icon: DollarSign,   label: 'Nómina'       },
+            { icon: LayoutDashboard, label: 'Dashboard' },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="glass rounded-xl p-3 flex flex-col items-start gap-2">
               <div className="w-7 h-7 bg-white/8 rounded-lg flex items-center justify-center">
@@ -102,9 +104,8 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
         </div>
       </div>
 
-      {/* ── Panel derecho (formulario) ── */}
+      {/* Panel derecho (formulario) */}
       <div className="flex-1 flex items-center justify-center p-6 bg-white lg:rounded-l-3xl relative">
-        {/* Logo mobile */}
         <div className="absolute top-6 left-6 flex items-center gap-2 lg:hidden">
           <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
             <Scissors className="w-4 h-4 text-white" />
@@ -113,14 +114,12 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
         </div>
 
         <div className="w-full max-w-sm animate-fade-in">
-          {/* Encabezado */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-slate-900">Iniciar sesión</h2>
             <p className="text-slate-500 text-sm mt-1">Ingresa tus credenciales para continuar</p>
           </div>
 
           <form onSubmit={onSubmit} className="space-y-4">
-            {/* Usuario */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700">Usuario</label>
               <div className="relative">
@@ -137,7 +136,6 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
               </div>
             </div>
 
-            {/* Contraseña */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700">Contraseña</label>
               <div className="relative">
@@ -160,15 +158,11 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   tabIndex={-1}
                 >
-                  {mostrarPass
-                    ? <EyeOff className="w-4 h-4" />
-                    : <Eye    className="w-4 h-4" />
-                  }
+                  {mostrarPass ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Error inline */}
             {error && (
               <div className="flex items-center gap-2 px-3 py-2.5 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-600 animate-fade-in">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -176,7 +170,6 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
               </div>
             )}
 
-            {/* Botón */}
             <button
               type="submit"
               disabled={cargando}
@@ -205,7 +198,7 @@ const Login = ({ handleLogin, toast, cerrarToast }) => {
 };
 
 // ===================================================================
-// ADMIN LAYOUT — SIDEBAR
+// ADMIN LAYOUT — SIDEBAR RESPONSIVE
 // ===================================================================
 const NAV_ITEMS = [
   { group: 'Principal' },
@@ -225,15 +218,31 @@ const NAV_ITEMS = [
 ];
 
 const AdminLayout = ({ handleLogout, currentUser }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  // Cerrar sidebar al navegar (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen flex bg-surface">
 
-      {/* ── Sidebar ── */}
-      <aside className="w-[240px] bg-sidebar-bg min-h-screen fixed left-0 top-0 z-30 flex flex-col shadow-sidebar sidebar-scroll overflow-y-auto">
+      {/* Backdrop móvil */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/50 backdrop-blur-[2px] lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed left-0 top-0 z-30 w-[240px] bg-sidebar-bg min-h-screen flex flex-col shadow-sidebar sidebar-scroll overflow-y-auto transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
 
         {/* Brand */}
-        <div className="px-5 py-5 border-b border-sidebar-border flex-shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="px-5 py-5 border-b border-sidebar-border flex-shrink-0 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
               <Scissors className="w-4 h-4 text-white" />
             </div>
@@ -242,6 +251,12 @@ const AdminLayout = ({ handleLogout, currentUser }) => {
               <p className="text-sidebar-text text-xs mt-0.5">Gestión de Confección</p>
             </div>
           </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden w-7 h-7 flex items-center justify-center rounded-lg text-slate-600 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Nav */}
@@ -277,7 +292,7 @@ const AdminLayout = ({ handleLogout, currentUser }) => {
           })}
         </nav>
 
-        {/* Footer del sidebar — usuario */}
+        {/* Footer usuario */}
         <div className="px-3 py-3 border-t border-sidebar-border flex-shrink-0">
           <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
             <div className="w-8 h-8 bg-brand-600/20 border border-brand-600/30 rounded-full flex items-center justify-center flex-shrink-0">
@@ -304,10 +319,31 @@ const AdminLayout = ({ handleLogout, currentUser }) => {
         </div>
       </aside>
 
-      {/* ── Contenido principal ── */}
-      <main className="flex-1 ml-[240px] min-h-screen">
-        <div className="max-w-[1400px] mx-auto p-6 lg:p-8 animate-fade-in">
-          <Outlet />
+      {/* Contenido principal */}
+      <main className="flex-1 lg:ml-[240px] min-h-screen flex flex-col">
+
+        {/* Top bar móvil */}
+        <header className="lg:hidden sticky top-0 z-20 bg-white border-b border-slate-100 h-14 flex items-center px-4 gap-3 shadow-sm flex-shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center">
+              <Scissors className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="text-slate-800 font-semibold text-sm">SistemaProd</span>
+          </div>
+        </header>
+
+        <div className="flex-1 max-w-[1400px] mx-auto w-full p-4 lg:p-8 animate-fade-in">
+          <ErrorBoundary>
+            <Suspense fallback={<PageSkeleton />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </main>
     </div>
@@ -320,10 +356,8 @@ const AdminLayout = ({ handleLogout, currentUser }) => {
 const OperarioLayout = ({ handleLogout, currentUser, children }) => {
   return (
     <div className="min-h-screen bg-surface">
-      {/* Top bar */}
       <header className="bg-white border-b border-slate-100 sticky top-0 z-20 shadow-[0_1px_0_0_#f1f5f9]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          {/* Brand */}
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-brand-600 rounded-xl flex items-center justify-center shadow-sm">
               <Scissors className="w-4 h-4 text-white" />
@@ -333,8 +367,6 @@ const OperarioLayout = ({ handleLogout, currentUser, children }) => {
               <p className="text-slate-400 text-xs mt-0.5">Gestión de Confección</p>
             </div>
           </div>
-
-          {/* Usuario + logout */}
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl">
               <div className="w-6 h-6 bg-brand-100 rounded-full flex items-center justify-center">
@@ -349,19 +381,13 @@ const OperarioLayout = ({ handleLogout, currentUser, children }) => {
                 {currentUser?.role || 'operario'}
               </span>
             </div>
-
-            <button
-              onClick={handleLogout}
-              className="btn-secondary gap-1.5 py-2 px-3"
-            >
+            <button onClick={handleLogout} className="btn-secondary gap-1.5 py-2 px-3">
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Salir</span>
             </button>
           </div>
         </div>
       </header>
-
-      {/* Contenido */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
         {children}
       </main>
@@ -450,12 +476,13 @@ function AppContent() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const calcularMetaDiaria = () => {
+  // Meta diaria memoizada
+  const metaDiaria = useMemo(() => {
     const hoyStr = new Date().toISOString().split('T')[0];
     return asignaciones
       .filter(a => a.fecha?.toString().split('T')[0].split(' ')[0] === hoyStr)
       .reduce((sum, a) => sum + (a.cantidad || 0), 0);
-  };
+  }, [asignaciones]);
 
   const handleLogin = async (username, password) => {
     const result = await iniciarSesion(username, password);
@@ -484,24 +511,42 @@ function AppContent() {
       {loading && <Loading />}
 
       <Routes>
-        {/* PÚBLICAS */}
-        <Route path="/login"        element={<Login handleLogin={handleLogin} toast={toast} cerrarToast={cerrarToast} />} />
-        <Route path="/operario/:id" element={<VistaOperarioPublica />} />
-        <Route path="/taller-tv"    element={<PantallaTallerTV {...{ empleados, asignaciones, operaciones, prendas, metaDiaria: calcularMetaDiaria() }} />} />
+        {/* Públicas */}
+        <Route path="/login" element={<Login handleLogin={handleLogin} toast={toast} cerrarToast={cerrarToast} />} />
 
-        {/* OPERARIO PANEL */}
+        <Route path="/operario/:id" element={
+          <ErrorBoundary>
+            <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-t-brand-600 animate-spin" /></div>}>
+              <VistaOperarioPublica />
+            </Suspense>
+          </ErrorBoundary>
+        } />
+
+        <Route path="/taller-tv" element={
+          <ErrorBoundary>
+            <Suspense fallback={<div className="min-h-screen bg-sidebar-bg" />}>
+              <PantallaTallerTV {...{ empleados, asignaciones, operaciones, prendas, metaDiaria }} />
+            </Suspense>
+          </ErrorBoundary>
+        } />
+
+        {/* Panel operario */}
         <Route
           path="/operario-panel"
           element={
             <ProtectedRoute user={currentUser}>
               <OperarioLayout handleLogout={handleLogout} currentUser={currentUser}>
-                <VistaAsignaciones {...{ asignaciones, empleados, prendas, operaciones, ordenes, recargarDatos, mostrarExito, mostrarError, mostrarAdvertencia }} />
+                <ErrorBoundary>
+                  <Suspense fallback={<PageSkeleton />}>
+                    <VistaAsignaciones {...{ asignaciones, empleados, prendas, operaciones, ordenes, recargarDatos, mostrarExito, mostrarError, mostrarAdvertencia }} />
+                  </Suspense>
+                </ErrorBoundary>
               </OperarioLayout>
             </ProtectedRoute>
           }
         />
 
-        {/* ADMIN */}
+        {/* Admin */}
         <Route
           path="/"
           element={
@@ -522,8 +567,8 @@ function AppContent() {
           <Route path="taller-admin" element={<PantallaTallerAdmin {...{ empleados, asignaciones, operaciones, prendas, ordenes, mostrarExito, mostrarError, mostrarInfo }} />} />
         </Route>
 
-        {/* COMODÍN */}
-        <Route path="*" element={<Navigate to="/taller-tv" replace />} />
+        {/* 404 */}
+        <Route path="*" element={<Pagina404 />} />
       </Routes>
     </>
   );
