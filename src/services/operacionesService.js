@@ -40,6 +40,18 @@ export const eliminarOperacion = async (id) => {
     .from('operaciones')
     .update({ activo: false })
     .eq('id', id);
-  
+
   if (error) throw error;
+};
+
+export const verificarOperacionExistente = async (nombre, prendaId) => {
+  const { data, error } = await supabase
+    .from('operaciones')
+    .select('id')
+    .ilike('nombre', nombre.trim())
+    .eq('prenda_id', prendaId)
+    .eq('activo', true)
+    .maybeSingle();
+  if (error) throw error;
+  return !!data;
 };
