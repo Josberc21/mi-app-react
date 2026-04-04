@@ -31,7 +31,7 @@ const VistaOrdenes        = React.lazy(() => import('./components/ordenes/VistaO
 const VistaAsignaciones   = React.lazy(() => import('./components/asignaciones/VistaAsignaciones'));
 const VistaRemisiones     = React.lazy(() => import('./components/remisiones/VistaRemisiones'));
 const VistaNomina         = React.lazy(() => import('./components/nomina/VistaNomina'));
-const VistaOperarioPublica = React.lazy(() => import('./components/operario/VistaOperarioPublica'));
+const VistaPanelOperario   = React.lazy(() => import('./components/operario/VistaPanelOperario'));
 const VistaDashboard      = React.lazy(() => import('./components/dashboard/VistaDashboard'));
 const PantallaTallerAdmin = React.lazy(() => import('./components/taller/PantallaTallerAdmin'));
 const PantallaTallerTV    = React.lazy(() => import('./components/taller/PantallaTallerTV'));
@@ -351,9 +351,11 @@ const AdminLayout = ({ handleLogout, currentUser }) => {
 };
 
 // ===================================================================
-// OPERARIO PANEL LAYOUT
+// PANEL LAYOUT (ayudante y operario)
 // ===================================================================
-const OperarioLayout = ({ handleLogout, currentUser, children }) => {
+const LABEL_ROL = { admin: 'Admin', ayudante: 'Ayudante', operario: 'Operario' };
+
+const PanelLayout = ({ handleLogout, currentUser, titulo, children }) => {
   return (
     <div className="min-h-screen bg-surface">
       <header className="bg-white border-b border-slate-100 sticky top-0 z-20 shadow-[0_1px_0_0_#f1f5f9]">
@@ -363,7 +365,7 @@ const OperarioLayout = ({ handleLogout, currentUser, children }) => {
               <Scissors className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-slate-800 font-semibold text-sm leading-none">Panel Operario</p>
+              <p className="text-slate-800 font-semibold text-sm leading-none">{titulo}</p>
               <p className="text-slate-400 text-xs mt-0.5">Gestión de Confección</p>
             </div>
           </div>
@@ -371,14 +373,14 @@ const OperarioLayout = ({ handleLogout, currentUser, children }) => {
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl">
               <div className="w-6 h-6 bg-brand-100 rounded-full flex items-center justify-center">
                 <span className="text-brand-700 text-[10px] font-bold uppercase">
-                  {currentUser?.nombre?.charAt(0) || currentUser?.username?.charAt(0) || 'O'}
+                  {currentUser?.nombre?.charAt(0) || currentUser?.username?.charAt(0) || 'U'}
                 </span>
               </div>
               <span className="text-slate-700 text-sm font-medium">
-                {currentUser?.nombre || currentUser?.username || 'Operario'}
+                {currentUser?.nombre || currentUser?.username || 'Usuario'}
               </span>
               <span className="badge-brand text-[10px]">
-                {currentUser?.role || 'operario'}
+                {LABEL_ROL[currentUser?.role] || currentUser?.role}
               </span>
             </div>
             <button onClick={handleLogout} className="btn-secondary gap-1.5 py-2 px-3">
@@ -398,10 +400,16 @@ const OperarioLayout = ({ handleLogout, currentUser, children }) => {
 // ===================================================================
 // PROTECTED ROUTE
 // ===================================================================
+const getRutaInicio = (role) => {
+  if (role === 'admin') return '/dashboard';
+  if (role === 'ayudante') return '/operario-panel';
+  return '/mi-panel'; // operario
+};
+
 const ProtectedRoute = ({ user, requiredRole, children }) => {
   if (!user) return <Navigate to="/login" replace />;
   if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to={user.role === 'admin' ? '/dashboard' : '/operario-panel'} replace />;
+    return <Navigate to={getRutaInicio(user.role)} replace />;
   }
   return children;
 };
@@ -450,7 +458,7 @@ function AppContent() {
             setCurrentUser(usuario);
             const rutaActual = window.location.pathname;
             if (rutaActual === '/login' || rutaActual === '/') {
-              navigate(usuario.role === 'admin' ? '/dashboard' : '/operario-panel', { replace: true });
+              navigate(getRutaInicio(usuario.role), { replace: true });
             }
           }
         }
@@ -489,7 +497,7 @@ function AppContent() {
     if (result.success) {
       setCurrentUser(result.user);
       mostrarExito(`Bienvenido, ${result.user.nombre || result.user.username}`);
-      navigate(result.user.role === 'admin' ? '/dashboard' : '/operario-panel');
+      navigate(getRutaInicio(result.user.role));
     } else {
       mostrarError(result.error || 'Credenciales incorrectas');
     }
@@ -514,13 +522,7 @@ function AppContent() {
         {/* Públicas */}
         <Route path="/login" element={<Login handleLogin={handleLogin} toast={toast} cerrarToast={cerrarToast} />} />
 
-        <Route path="/operario/:id" element={
-          <ErrorBoundary>
-            <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-t-brand-600 animate-spin" /></div>}>
-              <VistaOperarioPublica />
-            </Suspense>
-          </ErrorBoundary>
-        } />
+        {/* Ruta pública /operario/:id eliminada — operarios ahora se autentican */}
 
         <Route path="/taller-tv" element={
           <ErrorBoundary>
@@ -530,18 +532,38 @@ function AppContent() {
           </ErrorBoundary>
         } />
 
-        {/* Panel operario */}
+        {/* Panel ayudante — gestión de asignaciones */}
         <Route
           path="/operario-panel"
           element={
-            <ProtectedRoute user={currentUser}>
-              <OperarioLayout handleLogout={handleLogout} currentUser={currentUser}>
+            <ProtectedRoute user={currentUser} requiredRole="ayudante">
+              <PanelLayout handleLogout={handleLogout} currentUser={currentUser} titulo="Panel Ayudante">
                 <ErrorBoundary>
                   <Suspense fallback={<PageSkeleton />}>
                     <VistaAsignaciones {...{ asignaciones, empleados, prendas, operaciones, ordenes, recargarDatos, mostrarExito, mostrarError, mostrarAdvertencia }} />
                   </Suspense>
                 </ErrorBoundary>
-              </OperarioLayout>
+              </PanelLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Panel operario — vista personal del trabajador */}
+        <Route
+          path="/mi-panel"
+          element={
+            <ProtectedRoute user={currentUser} requiredRole="operario">
+              <PanelLayout handleLogout={handleLogout} currentUser={currentUser} titulo="Mi Panel">
+                <ErrorBoundary>
+                  <Suspense fallback={<PageSkeleton />}>
+                    <VistaPanelOperario
+                      currentUser={currentUser}
+                      mostrarExito={mostrarExito}
+                      mostrarError={mostrarError}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
+              </PanelLayout>
             </ProtectedRoute>
           }
         />

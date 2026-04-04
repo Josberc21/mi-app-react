@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, ArrowUpDown, CheckCheck, RotateCcw, ClipboardList } from 'lucide-react';
+import { Trash2, ArrowUpDown, CheckCheck, RotateCcw, ClipboardList, Hand } from 'lucide-react';
 
 const TablaAsignaciones = ({
   asignaciones,
@@ -92,9 +92,22 @@ const TablaAsignaciones = ({
                   ${parseFloat(a.monto || 0).toLocaleString()}
                 </td>
                 <td>
-                  <span className={a.completado ? 'badge-green' : 'badge-amber'}>
-                    {a.completado ? 'Completado' : 'Pendiente'}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className={a.completado ? 'badge-green' : 'badge-amber'}>
+                      {a.completado ? 'Completado' : 'Pendiente'}
+                    </span>
+                    {!a.completado && a.estado_reporte === 'pendiente' && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 w-fit">
+                        <Hand className="w-2.5 h-2.5" />
+                        {a.cantidad_reportada}/{a.cantidad} rep.
+                      </span>
+                    )}
+                    {!a.completado && a.estado_reporte === 'rechazado' && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-600 w-fit">
+                        Rechazado
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="text-right">
                   <div className="flex items-center justify-end gap-1.5">

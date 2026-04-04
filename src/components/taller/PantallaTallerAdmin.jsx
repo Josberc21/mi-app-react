@@ -3,9 +3,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Clock, TrendingUp, AlertCircle, Users, Package,
   Activity, ChevronDown, ChevronUp, Target, Zap,
-  AlertTriangle, CheckCircle, ArrowUpDown
+  AlertTriangle, CheckCircle, ArrowUpDown, Hand, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import { calcularDiasEntre } from '../../utils/dateUtils';
+import { aprobarReporte, rechazarReporte } from '../../services/operarioService';
 
 const PantallaTallerAdmin = ({
   empleados,
@@ -18,11 +19,13 @@ const PantallaTallerAdmin = ({
   const [filtroOperarios, setFiltroOperarios] = useState('hoy');
   const [ordenOperarios, setOrdenOperarios] = useState({ campo: null, direccion: 'asc' });
   const [seccionesAbiertas, setSeccionesAbiertas] = useState({
+    reportes: true,
     operarios: true,
     ordenes: true,
     metricas: true,
-    alertas: true
+    alertas: true,
   });
+  const [accionReporte, setAccionReporte] = useState(null); // id del reporte en proceso
 
   // Auto-refresh cada 30 segundos
   useEffect(() => {
@@ -405,6 +408,43 @@ const PantallaTallerAdmin = ({
       .slice(0, 5);
   }, [ordenes, operaciones, asignaciones]);
 
+  // ========== REPORTES PENDIENTES DE OPERARIOS ==========
+  const reportesPendientes = useMemo(() => {
+    return asignaciones
+      .filter(a => a.estado_reporte === 'pendiente')
+      .map(a => {
+        const emp = empleados.find(e => e.id === a.empleado_id);
+        const op  = operaciones.find(o => o.id === a.operacion_id);
+        const pr  = prendas.find(p => p.id === a.prenda_id);
+        return { ...a, empleado_nombre: emp?.nombre || '—', operacion_nombre: op?.nombre || '—', operacion_costo: op?.costo || 0, prenda_ref: pr?.referencia || '—' };
+      })
+      .sort((a, b) => new Date(a.fecha_reporte) - new Date(b.fecha_reporte));
+  }, [asignaciones, empleados, operaciones, prendas]);
+
+  const handleAprobarReporte = async (rep) => {
+    try {
+      setAccionReporte(rep.id);
+      await aprobarReporte(rep);
+      mostrarExito(`Aprobado: ${rep.cantidad_reportada} pzs de ${rep.empleado_nombre}`);
+    } catch (err) {
+      mostrarError(err.message || 'Error al aprobar');
+    } finally {
+      setAccionReporte(null);
+    }
+  };
+
+  const handleRechazarReporte = async (rep) => {
+    try {
+      setAccionReporte(rep.id);
+      await rechazarReporte(rep.id);
+      mostrarError(`Reporte rechazado. ${rep.empleado_nombre} será notificado.`);
+    } catch (err) {
+      mostrarError(err.message || 'Error al rechazar');
+    } finally {
+      setAccionReporte(null);
+    }
+  };
+
   // ========== RENDER ==========
   return (
     <div className="space-y-6 animate-slide-up">
@@ -422,6 +462,91 @@ const PantallaTallerAdmin = ({
           <span className="text-slate-300">· auto 30s</span>
         </div>
       </div>
+
+      {/* ── REPORTES PENDIENTES DE OPERARIOS ── */}
+      {reportesPendientes.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
+          <button
+            onClick={() => toggleSeccion('reportes')}
+            className="w-full px-5 py-4 flex items-center justify-between hover:bg-amber-100/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-amber-200 rounded-lg flex items-center justify-center">
+                <Hand className="w-4 h-4 text-amber-700" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-amber-900">Operarios levantaron la mano</p>
+                <p className="text-xs text-amber-600">{reportesPendientes.length} reporte{reportesPendientes.length !== 1 ? 's' : ''} esperando aprobación</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="bg-amber-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                {reportesPendientes.length}
+              </span>
+              {seccionesAbiertas.reportes ? <ChevronUp className="w-4 h-4 text-amber-600" /> : <ChevronDown className="w-4 h-4 text-amber-600" />}
+            </div>
+          </button>
+
+          {seccionesAbiertas.reportes && (
+            <div className="border-t border-amber-200 divide-y divide-amber-100">
+              {reportesPendientes.map(rep => (
+                <div key={rep.id} className="px-5 py-4 flex items-center gap-4">
+                  {/* Avatar */}
+                  <div className="w-9 h-9 bg-amber-200 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-800 text-sm font-bold">{rep.empleado_nombre.charAt(0)}</span>
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-900">{rep.empleado_nombre}</p>
+                    <p className="text-xs text-slate-500 truncate">{rep.operacion_nombre} · {rep.prenda_ref}</p>
+                    <p className="text-xs text-amber-700 font-semibold mt-0.5">
+                      Reporta {rep.cantidad_reportada} de {rep.cantidad} piezas
+                      <span className="text-slate-400 font-normal ml-2">
+                        → ${(rep.operacion_costo * rep.cantidad_reportada).toLocaleString()}
+                      </span>
+                    </p>
+                  </div>
+
+                  {/* Hora del reporte */}
+                  <div className="hidden sm:block text-right flex-shrink-0">
+                    <p className="text-[11px] text-slate-400">
+                      {rep.fecha_reporte
+                        ? new Date(rep.fecha_reporte).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+                        : '—'}
+                    </p>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleAprobarReporte(rep)}
+                      disabled={accionReporte === rep.id}
+                      title="Aprobar"
+                      className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      {accionReporte === rep.id
+                        ? <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        : <ThumbsUp className="w-3.5 h-3.5" />
+                      }
+                      <span className="hidden sm:inline">Aprobar</span>
+                    </button>
+                    <button
+                      onClick={() => handleRechazarReporte(rep)}
+                      disabled={accionReporte === rep.id}
+                      title="Rechazar"
+                      className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-xs font-semibold rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      <ThumbsDown className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Rechazar</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* MÉTRICAS HERO */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
