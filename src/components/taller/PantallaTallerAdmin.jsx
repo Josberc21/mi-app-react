@@ -13,7 +13,9 @@ const PantallaTallerAdmin = ({
   asignaciones,
   operaciones,
   prendas,
-  ordenes
+  ordenes,
+  mostrarExito,
+  mostrarError,
 }) => {
   const [actualizar, setActualizar] = useState(0);
   const [filtroOperarios, setFiltroOperarios] = useState('hoy');
