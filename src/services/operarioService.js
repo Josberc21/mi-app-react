@@ -76,6 +76,24 @@ export const obtenerMiNomina = async (empleadoId) => {
   return data;
 };
 
+// Actualizar nombre y teléfono del empleado
+export const actualizarMiPerfil = async (empleadoId, { nombre, telefono }) => {
+  const { data, error } = await supabase
+    .from('empleados')
+    .update({ nombre: nombre.trim(), telefono: telefono.trim() })
+    .eq('id', empleadoId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// Cambiar contraseña vía Supabase Auth (usuario autenticado)
+export const cambiarMiContrasena = async (nuevaContrasena) => {
+  const { error } = await supabase.auth.updateUser({ password: nuevaContrasena });
+  if (error) throw error;
+};
+
 // Operario reporta cuántas terminó (levantar la mano)
 export const reportarProgreso = async (asignacionId, cantidadReportada) => {
   const { data, error } = await supabase

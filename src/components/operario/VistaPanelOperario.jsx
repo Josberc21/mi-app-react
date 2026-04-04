@@ -1,23 +1,27 @@
 // src/components/operario/VistaPanelOperario.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Clock, CheckCircle2, AlertCircle, TrendingUp, RefreshCw,
   Package, DollarSign, Zap, Hand, ChevronDown, ChevronUp,
-  Calendar, XCircle, Hourglass
+  Calendar, XCircle, Hourglass, UserCog, Eye, EyeOff, Save
 } from 'lucide-react';
+import { supabase } from '../../supabaseClient';
 import {
+  obtenerMiEmpleado,
   obtenerMisAsignaciones,
   obtenerMisEstadisticasHoy,
   obtenerMiNomina,
   reportarProgreso,
+  actualizarMiPerfil,
+  cambiarMiContrasena,
 } from '../../services/operarioService';
 
-// ─── Utilidad: formato de fecha ───────────────────────────────────────────────
+// ─── Utilidades ───────────────────────────────────────────────────────────────
 const formatMes = (mesStr) => {
   if (!mesStr) return '—';
   const [year, month] = mesStr.split('-');
-  const fecha = new Date(parseInt(year), parseInt(month) - 1, 1);
-  return fecha.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+  return new Date(parseInt(year), parseInt(month) - 1, 1)
+    .toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
 };
 
 // ─── Modal levantar la mano ───────────────────────────────────────────────────
@@ -70,43 +74,23 @@ const ModalLevantarMano = ({ asignacion, onClose, onConfirm, cargando }) => {
                 className="input-base text-center text-xl font-bold"
                 autoFocus
               />
-              <p className="text-xs text-slate-400 mt-1.5 text-center">
-                Máximo {asignacion.cantidad} piezas
-              </p>
+              <p className="text-xs text-slate-400 mt-1.5 text-center">Máximo {asignacion.cantidad} piezas</p>
             </div>
-
             {error && (
               <div className="flex items-center gap-2 px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-600">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
-
             <div className="flex gap-3 pt-1">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={cargando}
-                className="flex-1 btn-secondary py-2.5"
-              >
+              <button type="button" onClick={onClose} disabled={cargando} className="flex-1 btn-secondary py-2.5">
                 Cancelar
               </button>
-              <button
-                type="submit"
-                disabled={cargando}
-                className="flex-1 btn-primary py-2.5"
-              >
-                {cargando ? (
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <>
-                    <Hand className="w-4 h-4" />
-                    Levantar la mano
-                  </>
-                )}
+              <button type="submit" disabled={cargando} className="flex-1 btn-primary py-2.5">
+                {cargando
+                  ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  : <><Hand className="w-4 h-4" />Levantar la mano</>
+                }
               </button>
             </div>
           </form>
@@ -120,21 +104,38 @@ const ModalLevantarMano = ({ asignacion, onClose, onConfirm, cargando }) => {
 const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
   const empleadoId = currentUser?.empleado_id;
 
-  const [asignaciones, setAsignaciones] = useState([]);
-  const [estadisticas, setEstadisticas] = useState({ totalPiezas: 0, totalMonto: 0, totalOperaciones: 0 });
-  const [nomina, setNomina] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [ultimaActualizacion, setUltimaActualizacion] = useState(new Date());
+  // ── Estado de datos ──
+  const [asignaciones, setAsignaciones]   = useState([]);
+  const [estadisticas, setEstadisticas]   = useState({ totalPiezas: 0, totalMonto: 0, totalOperaciones: 0 });
+  const [nomina, setNomina]               = useState([]);
+  const [empleado, setEmpleado]           = useState(null);
+  const [loading, setLoading]             = useState(true);
+  const [ultimaAct, setUltimaAct]         = useState(new Date());
 
-  // Secciones colapsables
-  const [secciones, setSecciones] = useState({ pendientes: true, reportes: true, nomina: false });
+  // ── Secciones colapsables ──
+  const [secciones, setSecciones] = useState({
+    pendientes: true,
+    reportes: true,
+    nomina: false,
+    perfil: false,
+  });
   const toggleSeccion = (key) => setSecciones(prev => ({ ...prev, [key]: !prev[key] }));
 
-  // Modal levantar la mano
+  // ── Modal levantar la mano ──
   const [modalAsig, setModalAsig] = useState(null);
-  const [enviando, setEnviando] = useState(false);
+  const [enviando, setEnviando]   = useState(false);
 
-  // ── sin empleado_id vinculado ──
+  // ── Perfil editable ──
+  const perfilInicializado     = useRef(false);
+  const [perfil, setPerfil]    = useState({ nombre: '', telefono: '' });
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
+
+  // ── Contraseña ──
+  const [clave, setClave]             = useState({ nueva: '', confirmar: '' });
+  const [mostrarNueva, setMostrarNueva] = useState(false);
+  const [guardandoClave, setGuardandoClave] = useState(false);
+
+  // ── Sin empleado_id vinculado ──
   if (!empleadoId) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center p-6">
@@ -143,26 +144,27 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
             <AlertCircle className="w-8 h-8 text-amber-500" />
           </div>
           <h2 className="text-lg font-bold text-slate-900 mb-2">Perfil no vinculado</h2>
-          <p className="text-sm text-slate-500">
-            Tu usuario no está vinculado a un empleado. Contacta al administrador.
-          </p>
+          <p className="text-sm text-slate-500">Tu usuario no está vinculado a un empleado. Contacta al administrador.</p>
         </div>
       </div>
     );
   }
 
+  // ── Carga de datos ──
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
-      const [asigs, stats, nom] = await Promise.all([
+      const [emp, asigs, stats, nom] = await Promise.all([
+        obtenerMiEmpleado(empleadoId),
         obtenerMisAsignaciones(empleadoId),
         obtenerMisEstadisticasHoy(empleadoId),
         obtenerMiNomina(empleadoId),
       ]);
+      setEmpleado(emp);
       setAsignaciones(asigs);
       setEstadisticas(stats);
       setNomina(nom);
-      setUltimaActualizacion(new Date());
+      setUltimaAct(new Date());
     } catch (err) {
       console.error('Error cargando panel operario:', err);
       mostrarError('No se pudo cargar tu información.');
@@ -171,20 +173,67 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
     }
   }, [empleadoId]);
 
+  // Inicializar formulario de perfil una sola vez
+  useEffect(() => {
+    if (empleado && !perfilInicializado.current) {
+      setPerfil({ nombre: empleado.nombre || '', telefono: empleado.telefono || '' });
+      perfilInicializado.current = true;
+    }
+  }, [empleado]);
+
+  // Carga inicial + polling de respaldo
   useEffect(() => {
     cargarDatos();
-    const interval = setInterval(cargarDatos, 60000); // auto-refresh 1 min
+    const interval = setInterval(cargarDatos, 120000); // respaldo cada 2 min
     return () => clearInterval(interval);
   }, [cargarDatos]);
 
+  // ── Supabase Realtime — solo las asignaciones de este empleado ──
+  useEffect(() => {
+    if (!empleadoId) return;
+
+    const channel = supabase
+      .channel(`panel-operario-${empleadoId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'asignaciones',
+          filter: `empleado_id=eq.${empleadoId}`,
+        },
+        () => {
+          // Recarga solo datos operativos (no perfil, no nómina completa)
+          Promise.all([
+            obtenerMisAsignaciones(empleadoId),
+            obtenerMisEstadisticasHoy(empleadoId),
+          ]).then(([asigs, stats]) => {
+            setAsignaciones(asigs);
+            setEstadisticas(stats);
+            setUltimaAct(new Date());
+          }).catch(console.error);
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [empleadoId]);
+
+  // ── Levantar la mano ──
   const handleLevantarMano = async (cantidadReportada) => {
     if (!modalAsig) return;
     try {
       setEnviando(true);
       await reportarProgreso(modalAsig.id, cantidadReportada);
-      mostrarExito(`Reporte enviado: ${cantidadReportada} de ${modalAsig.cantidad} piezas. Esperando aprobación.`);
+      mostrarExito(`Reporte enviado: ${cantidadReportada} de ${modalAsig.cantidad} pzs. Esperando aprobación.`);
       setModalAsig(null);
-      await cargarDatos();
+      // Realtime actualizará automáticamente, pero forzamos para estadísticas
+      const [asigs, stats] = await Promise.all([
+        obtenerMisAsignaciones(empleadoId),
+        obtenerMisEstadisticasHoy(empleadoId),
+      ]);
+      setAsignaciones(asigs);
+      setEstadisticas(stats);
     } catch (err) {
       mostrarError(err.message || 'Error al enviar el reporte');
     } finally {
@@ -192,18 +241,52 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
     }
   };
 
-  // Clasificación
-  const pendientes = asignaciones.filter(a => !a.completado && a.estado_reporte !== 'pendiente');
-  const enEspera   = asignaciones.filter(a => !a.completado && a.estado_reporte === 'pendiente');
-  const rechazadas = asignaciones.filter(a => !a.completado && a.estado_reporte === 'rechazado');
-  const hoy        = new Date().toISOString().split('T')[0];
+  // ── Guardar perfil ──
+  const handleGuardarPerfil = async (e) => {
+    e.preventDefault();
+    if (!perfil.nombre.trim()) { mostrarError('El nombre no puede estar vacío'); return; }
+    try {
+      setGuardandoPerfil(true);
+      await actualizarMiPerfil(empleadoId, perfil);
+      mostrarExito('Perfil actualizado correctamente');
+      // Refrescar datos del empleado
+      const emp = await obtenerMiEmpleado(empleadoId);
+      setEmpleado(emp);
+    } catch (err) {
+      mostrarError(err.message || 'Error al actualizar perfil');
+    } finally {
+      setGuardandoPerfil(false);
+    }
+  };
+
+  // ── Cambiar contraseña ──
+  const handleCambiarClave = async (e) => {
+    e.preventDefault();
+    if (clave.nueva.length < 6) { mostrarError('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (clave.nueva !== clave.confirmar) { mostrarError('Las contraseñas no coinciden'); return; }
+    try {
+      setGuardandoClave(true);
+      await cambiarMiContrasena(clave.nueva);
+      mostrarExito('Contraseña actualizada correctamente');
+      setClave({ nueva: '', confirmar: '' });
+    } catch (err) {
+      mostrarError(err.message || 'Error al cambiar contraseña');
+    } finally {
+      setGuardandoClave(false);
+    }
+  };
+
+  // ── Clasificación de asignaciones ──
+  const pendientes   = asignaciones.filter(a => !a.completado && a.estado_reporte !== 'pendiente');
+  const enEspera     = asignaciones.filter(a => !a.completado && a.estado_reporte === 'pendiente');
+  const rechazadas   = asignaciones.filter(a => !a.completado && a.estado_reporte === 'rechazado');
+  const hoy          = new Date().toISOString().split('T')[0];
   const completadasHoy = asignaciones.filter(a => a.completado && a.fecha_terminado?.startsWith(hoy));
-  const minutosDesdeAct = Math.floor((new Date() - ultimaActualizacion) / 60000);
-
-  // Nómina del mes actual
-  const mesActual = new Date().toISOString().substring(0, 7);
+  const mesActual    = new Date().toISOString().substring(0, 7);
   const nominaMesActual = nomina.find(n => n.mes?.startsWith(mesActual));
+  const minutosDesdeAct = Math.floor((new Date() - ultimaAct) / 60000);
 
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <>
       {modalAsig && (
@@ -242,17 +325,15 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
           </div>
         </div>
 
-        {/* ── Reportes en espera de aprobación ── */}
+        {/* ── En espera de aprobación ── */}
         {enEspera.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Hourglass className="w-4 h-4 text-amber-600" />
-                <h2 className="text-sm font-semibold text-amber-800">Esperando aprobación</h2>
+                <h2 className="text-sm font-semibold text-amber-800">Esperando aprobación del admin</h2>
               </div>
-              <span className="bg-amber-200 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                {enEspera.length}
-              </span>
+              <span className="bg-amber-200 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full">{enEspera.length}</span>
             </div>
             <div className="divide-y divide-amber-100">
               {enEspera.map(a => (
@@ -273,7 +354,7 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
           <div className="bg-rose-50 border border-rose-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 flex items-center gap-2">
               <XCircle className="w-4 h-4 text-rose-500" />
-              <h2 className="text-sm font-semibold text-rose-800">Reportes rechazados — puedes volver a reportar</h2>
+              <h2 className="text-sm font-semibold text-rose-800">Reporte rechazado — puedes volver a reportar</h2>
             </div>
             <div className="divide-y divide-rose-100">
               {rechazadas.map(a => (
@@ -295,7 +376,7 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
           </div>
         )}
 
-        {/* ── Asignaciones pendientes ── */}
+        {/* ── Pendientes ── */}
         <div className="bg-white rounded-2xl shadow-card overflow-hidden">
           <button
             onClick={() => toggleSeccion('pendientes')}
@@ -411,11 +492,10 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
 
           {secciones.nomina && (
             <div>
-              {/* Resumen mes actual */}
               {nominaMesActual && (
                 <div className="px-5 py-4 bg-emerald-50 border-b border-emerald-100">
-                  <p className="text-xs text-emerald-600 font-medium mb-1 capitalize">{formatMes(nominaMesActual.mes)} — Mes actual</p>
-                  <div className="grid grid-cols-3 gap-3 mt-2">
+                  <p className="text-xs text-emerald-600 font-medium mb-2 capitalize">{formatMes(nominaMesActual.mes)} — Mes actual</p>
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="text-center">
                       <p className="text-xl font-bold text-emerald-700">${parseFloat(nominaMesActual.total_nomina || 0).toLocaleString()}</p>
                       <p className="text-[11px] text-emerald-500">Total a pagar</p>
@@ -431,28 +511,22 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
                   </div>
                 </div>
               )}
-
-              {/* Historial meses anteriores */}
-              {nomina.filter(n => !n.mes?.startsWith(mesActual)).length > 0 && (
+              {nomina.filter(n => !n.mes?.startsWith(mesActual)).length > 0 ? (
                 <div className="divide-y divide-slate-100">
-                  {nomina
-                    .filter(n => !n.mes?.startsWith(mesActual))
-                    .map(n => (
-                      <div key={n.mes} className="px-5 py-3.5 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          <p className="text-sm text-slate-600 capitalize">{formatMes(n.mes)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-slate-900">${parseFloat(n.total_nomina || 0).toLocaleString()}</p>
-                          <p className="text-[11px] text-slate-400">{n.piezas_totales} pzs</p>
-                        </div>
+                  {nomina.filter(n => !n.mes?.startsWith(mesActual)).map(n => (
+                    <div key={n.mes} className="px-5 py-3.5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <p className="text-sm text-slate-600 capitalize">{formatMes(n.mes)}</p>
                       </div>
-                    ))}
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-slate-900">${parseFloat(n.total_nomina || 0).toLocaleString()}</p>
+                        <p className="text-[11px] text-slate-400">{n.piezas_totales} pzs</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-
-              {nomina.length === 0 && (
+              ) : !nominaMesActual && (
                 <div className="flex flex-col items-center py-8 text-center px-6">
                   <Package className="w-10 h-10 text-slate-200 mx-auto mb-2" />
                   <p className="text-sm text-slate-400">Aún no hay operaciones aprobadas este mes</p>
@@ -462,7 +536,107 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Mi perfil ── */}
+        <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+          <button
+            onClick={() => toggleSeccion('perfil')}
+            className="w-full px-5 py-4 border-b border-slate-100 flex items-center justify-between hover:bg-slate-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <UserCog className="w-4 h-4 text-brand-500" />
+              <h2 className="text-sm font-semibold text-slate-800">Mi perfil</h2>
+            </div>
+            {secciones.perfil ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+
+          {secciones.perfil && (
+            <div className="divide-y divide-slate-100">
+              {/* Datos personales */}
+              <form onSubmit={handleGuardarPerfil} className="px-5 py-5 space-y-4">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Datos personales</p>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Nombre completo</label>
+                  <input
+                    type="text"
+                    value={perfil.nombre}
+                    onChange={(e) => setPerfil(p => ({ ...p, nombre: e.target.value }))}
+                    className="input-base"
+                    placeholder="Tu nombre"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Teléfono</label>
+                  <input
+                    type="tel"
+                    value={perfil.telefono}
+                    onChange={(e) => setPerfil(p => ({ ...p, telefono: e.target.value }))}
+                    className="input-base"
+                    placeholder="Número de contacto"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={guardandoPerfil}
+                  className="btn-primary w-full py-2.5"
+                >
+                  {guardandoPerfil
+                    ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    : <><Save className="w-4 h-4" />Guardar cambios</>
+                  }
+                </button>
+              </form>
+
+              {/* Cambiar contraseña */}
+              <form onSubmit={handleCambiarClave} className="px-5 py-5 space-y-4">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cambiar contraseña</p>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Nueva contraseña</label>
+                  <div className="relative">
+                    <input
+                      type={mostrarNueva ? 'text' : 'password'}
+                      value={clave.nueva}
+                      onChange={(e) => setClave(c => ({ ...c, nueva: e.target.value }))}
+                      className="input-base pr-10"
+                      placeholder="Mínimo 6 caracteres"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMostrarNueva(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      tabIndex={-1}
+                    >
+                      {mostrarNueva ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Confirmar contraseña</label>
+                  <input
+                    type="password"
+                    value={clave.confirmar}
+                    onChange={(e) => setClave(c => ({ ...c, confirmar: e.target.value }))}
+                    className="input-base"
+                    placeholder="Repite la contraseña"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={guardandoClave || !clave.nueva || !clave.confirmar}
+                  className="btn-secondary w-full py-2.5"
+                >
+                  {guardandoClave
+                    ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    : 'Cambiar contraseña'
+                  }
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer ── */}
         <div className="text-center pb-2">
           <button
             onClick={cargarDatos}
@@ -470,7 +644,7 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
             className="flex items-center gap-1.5 mx-auto text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Actualizado hace {minutosDesdeAct === 0 ? 'menos de 1' : minutosDesdeAct} min
+            {loading ? 'Actualizando...' : `Actualizado hace ${minutosDesdeAct === 0 ? 'menos de 1' : minutosDesdeAct} min · Realtime activo`}
           </button>
         </div>
       </div>
