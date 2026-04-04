@@ -48,6 +48,14 @@ export const useDatos = (currentUser) => {
     cargarDatos();
   }, [cargarDatos]);
 
+  // Refresca datos al volver a la pestaña (cubre caídas del WebSocket)
+  useEffect(() => {
+    if (!currentUser) return;
+    const handleFocus = () => cargarDatos();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [currentUser, cargarDatos]);
+
   // ── Supabase Realtime ─────────────────────────────────────────────
   // Cada tabla recarga solo su slice de estado cuando hay cambios.
   // asignaciones y ordenes son las más críticas (cambios frecuentes en taller).

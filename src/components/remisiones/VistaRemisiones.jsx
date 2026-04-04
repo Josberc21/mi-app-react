@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Package } from 'lucide-react';
+import CampoBusqueda from '../common/CampoBusqueda';
+import Paginacion from '../common/Paginacion';
 import ModalConfirmar from '../common/ModalConfirmar';
 import FormularioRemision from './FormularioRemision';
 import TarjetaRemision from './TarjetaRemision';
 import TablaTrazabilidad from './TablaTrazabilidad';
 import { useModal } from '../../hooks/useModal';
+import { useBusqueda } from '../../hooks/useBusqueda';
+import { usePaginacion } from '../../hooks/usePaginacion';
 import { crearRemision, eliminarRemision } from '../../services/remisionesService';
 import { obtenerFechaHoy } from '../../utils/dateUtils';
 
@@ -29,6 +33,25 @@ const VistaRemisiones = ({
 
   const [remisionesExpandidas, setRemisionesExpandidas] = useState({});
   const modalEliminar = useModal();
+
+  // Búsqueda por número de orden, fecha y referencia de prenda
+  const { busqueda, setBusqueda, datosFiltrados } = useBusqueda(
+    remisiones,
+    (r, t) => {
+      const orden = ordenes.find(o => o.id === r.orden_id);
+      const prenda = prendas.find(p => p.id === orden?.prenda_id);
+      return (
+        orden?.numero_orden?.toString().includes(t) ||
+        r.fecha_despacho?.includes(t) ||
+        (prenda?.referencia?.toLowerCase().includes(t.toLowerCase()))
+      );
+    }
+  );
+
+  const {
+    paginaActual, totalPaginas, datosPaginados,
+    primeraPagina, paginaAnterior, paginaSiguiente, ultimaPagina
+  } = usePaginacion(datosFiltrados, 15);
 
   const toggleRemisionExpandida = (remisionId) => {
     setRemisionesExpandidas(prev => ({
@@ -368,17 +391,30 @@ const VistaRemisiones = ({
       <div className="card-p space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-800">Historial de remisiones</h2>
-          {remisiones.length > 0 && (
-            <div className="flex gap-2">
-              <button onClick={() => { const t = {}; remisiones.forEach(r => t[r.id] = true); setRemisionesExpandidas(t); }} className="btn-ghost text-xs py-1 px-2">Expandir todas</button>
-              <button onClick={() => setRemisionesExpandidas({})} className="btn-ghost text-xs py-1 px-2">Colapsar</button>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400">
+              {datosFiltrados.length} resultado{datosFiltrados.length !== 1 ? 's' : ''}
+            </span>
+            {remisiones.length > 0 && (
+              <div className="flex gap-2">
+                <button onClick={() => { const t = {}; datosPaginados.forEach(r => t[r.id] = true); setRemisionesExpandidas(t); }} className="btn-ghost text-xs py-1 px-2">Expandir</button>
+                <button onClick={() => setRemisionesExpandidas({})} className="btn-ghost text-xs py-1 px-2">Colapsar</button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {remisiones.length > 0 ? (
+        <CampoBusqueda
+          valor={busqueda}
+          onChange={setBusqueda}
+          placeholder="Buscar por número de orden, fecha o prenda..."
+          totalResultados={datosFiltrados.length}
+          totalItems={remisiones.length}
+        />
+
+        {datosPaginados.length > 0 ? (
           <div className="space-y-3">
-            {remisiones.map(rem => (
+            {datosPaginados.map(rem => (
               <TarjetaRemision
                 key={rem.id}
                 remision={rem}
@@ -397,10 +433,24 @@ const VistaRemisiones = ({
             <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
               <Package className="w-7 h-7 text-slate-400" />
             </div>
-            <p className="text-slate-600 font-medium">Sin remisiones registradas</p>
-            <p className="text-slate-400 text-sm mt-1">Crea la primera remisión con el formulario</p>
+            <p className="text-slate-600 font-medium">
+              {busqueda ? 'Sin resultados' : 'Sin remisiones registradas'}
+            </p>
+            <p className="text-slate-400 text-sm mt-1">
+              {busqueda ? 'Prueba con otra búsqueda' : 'Crea la primera remisión con el formulario'}
+            </p>
           </div>
         )}
+
+        <Paginacion
+          paginaActual={paginaActual}
+          totalPaginas={totalPaginas}
+          totalItems={datosFiltrados.length}
+          primeraPagina={primeraPagina}
+          paginaAnterior={paginaAnterior}
+          paginaSiguiente={paginaSiguiente}
+          ultimaPagina={ultimaPagina}
+        />
       </div>
 
       <TablaTrazabilidad ordenes={ordenes} prendas={prendas} remisiones={remisiones} calcularProgresoOrden={calcularProgresoOrden} asignaciones={asignaciones} />
