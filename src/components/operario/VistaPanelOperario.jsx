@@ -495,14 +495,10 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
               {nominaMesActual && (
                 <div className="px-5 py-4 bg-emerald-50 border-b border-emerald-100">
                   <p className="text-xs text-emerald-600 font-medium mb-2 capitalize">{formatMes(nominaMesActual.mes)} — Mes actual</p>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="text-center">
                       <p className="text-xl font-bold text-emerald-700">${parseFloat(nominaMesActual.total_nomina || 0).toLocaleString()}</p>
                       <p className="text-[11px] text-emerald-500">Total a pagar</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xl font-bold text-slate-700">{nominaMesActual.piezas_totales}</p>
-                      <p className="text-[11px] text-slate-400">Piezas</p>
                     </div>
                     <div className="text-center">
                       <p className="text-xl font-bold text-slate-700">{nominaMesActual.operaciones_completadas}</p>
@@ -521,7 +517,7 @@ const VistaPanelOperario = ({ currentUser, mostrarExito, mostrarError }) => {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-slate-900">${parseFloat(n.total_nomina || 0).toLocaleString()}</p>
-                        <p className="text-[11px] text-slate-400">{n.piezas_totales} pzs</p>
+                        <p className="text-[11px] text-slate-400">{n.operaciones_completadas} operaciones</p>
                       </div>
                     </div>
                   ))}

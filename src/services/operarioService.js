@@ -66,14 +66,29 @@ export const obtenerMisEstadisticasHoy = async (empleadoId) => {
 };
 
 export const obtenerMiNomina = async (empleadoId) => {
+  // Calculamos directo desde asignaciones — no usamos vista_nomina
+  // porque la vista puede incluir datos históricos de otras fuentes
   const { data, error } = await supabase
-    .from('vista_nomina')
-    .select('*')
+    .from('asignaciones')
+    .select('cantidad, monto, fecha_terminado')
     .eq('empleado_id', empleadoId)
-    .order('mes', { ascending: false })
-    .limit(6);
+    .eq('completado', true)
+    .not('fecha_terminado', 'is', null)
+    .order('fecha_terminado', { ascending: false });
   if (error) throw error;
-  return data;
+
+  // Agrupar por mes (YYYY-MM)
+  const porMes = {};
+  for (const a of data) {
+    const mes = a.fecha_terminado.substring(0, 7);
+    if (!porMes[mes]) porMes[mes] = { mes, total_nomina: 0, operaciones_completadas: 0 };
+    porMes[mes].total_nomina        += parseFloat(a.monto || 0);
+    porMes[mes].operaciones_completadas += 1;
+  }
+
+  return Object.values(porMes)
+    .sort((a, b) => b.mes.localeCompare(a.mes))
+    .slice(0, 6);
 };
 
 // Actualizar nombre y teléfono del empleado
