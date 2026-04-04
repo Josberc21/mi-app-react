@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Plus, Info } from 'lucide-react';
+import { Plus, Info, Loader2 } from 'lucide-react';
 
 const FormularioAsignacion = ({
   formAsig,
@@ -11,6 +11,7 @@ const FormularioAsignacion = ({
   asignaciones,
   onSeleccionarOrden,
   onSubmit,
+  loading = false,
 }) => {
   const disponibilidadOperaciones = useMemo(() => {
     if (!formAsig.orden_id || !formAsig.prenda_id) return {};
@@ -185,11 +186,14 @@ const FormularioAsignacion = ({
         <div className="flex items-end">
           <button
             type="submit"
-            disabled={!formAsig.orden_id}
+            disabled={!formAsig.orden_id || loading}
             className="btn-primary w-full"
           >
-            <Plus className="w-4 h-4" />
-            Asignar
+            {loading
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Plus className="w-4 h-4" />
+            }
+            {loading ? 'Asignando...' : 'Asignar'}
           </button>
         </div>
       </div>

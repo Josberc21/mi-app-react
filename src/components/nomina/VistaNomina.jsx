@@ -19,6 +19,8 @@ const VistaNomina = ({
   const [filtroFechaInicio, setFiltroFechaInicio] = useState('');
   const [filtroFechaFin, setFiltroFechaFin] = useState('');
   const [nominaFiltrada, setNominaFiltrada] = useState(null);
+  const [calculando, setCalculando] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   // Establecer rangos rápidos
   const setRangoRapido = (dias) => {
@@ -44,6 +46,9 @@ const VistaNomina = ({
       return;
     }
 
+    setCalculando(true);
+    // setTimeout 0 allows the spinner to render before the heavy computation
+    setTimeout(() => {
     const reporte = empleados.map(emp => {
       const asignacionesEmp = asignaciones.filter(a => {
         if (!a.completado || !a.fecha_terminado || a.empleado_id !== emp.id) return false;
@@ -67,12 +72,13 @@ const VistaNomina = ({
     }).filter(r => r.monto > 0);
 
     setNominaFiltrada(reporte);
-    
+    setCalculando(false);
     if (reporte.length > 0) {
       mostrarExito(`Nómina calculada: ${reporte.length} empleados con pagos pendientes`);
     } else {
       mostrarAdvertencia('No hay empleados con pagos en el período seleccionado');
     }
+    }, 0);
   };
 
   // Exportar a Excel
@@ -81,6 +87,7 @@ const VistaNomina = ({
       mostrarAdvertencia('No hay datos de nómina para exportar');
       return;
     }
+    setExportando(true);
 
     // Crear hoja resumen
     const datosResumen = nominaFiltrada.map(emp => ({
@@ -145,7 +152,7 @@ const VistaNomina = ({
     const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const nombreArchivo = `Nomina_${filtroFechaInicio}_${filtroFechaFin}.xlsx`;
     saveAs(blob, nombreArchivo);
-
+    setExportando(false);
     mostrarExito(`Nómina exportada: ${nombreArchivo}`);
   };
 
@@ -164,10 +171,11 @@ const VistaNomina = ({
         onCalcular={generarReporteNomina}
         onLimpiar={limpiarFiltros}
         onRangoRapido={setRangoRapido}
+        calculando={calculando}
       />
 
       {nominaFiltrada && nominaFiltrada.length > 0 ? (
-        <ResumenNomina nominaFiltrada={nominaFiltrada} filtroFechaInicio={filtroFechaInicio} filtroFechaFin={filtroFechaFin} onExportar={exportarNominaExcel}>
+        <ResumenNomina nominaFiltrada={nominaFiltrada} filtroFechaInicio={filtroFechaInicio} filtroFechaFin={filtroFechaFin} onExportar={exportarNominaExcel} exportando={exportando}>
           {nominaFiltrada.map(emp => {
             const asignacionesDetalle = asignaciones.filter(a => {
               if (!a.completado || !a.fecha_terminado || a.empleado_id !== emp.id) return false;

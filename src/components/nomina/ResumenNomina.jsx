@@ -1,12 +1,13 @@
 // src/components/nomina/ResumenNomina.jsx
 import React from 'react';
-import { Download, Users, Settings, Package, DollarSign } from 'lucide-react';
+import { Download, Users, Settings, Package, DollarSign, Loader2 } from 'lucide-react';
 
 const ResumenNomina = ({
   nominaFiltrada,
   filtroFechaInicio,
   filtroFechaFin,
   onExportar,
+  exportando = false,
   children
 }) => {
   const totalGeneral = nominaFiltrada.reduce((sum, r) => sum + r.monto, 0);
@@ -25,10 +26,14 @@ const ResumenNomina = ({
         </div>
         <button
           onClick={onExportar}
+          disabled={exportando}
           className="btn-primary gap-2 self-start sm:self-auto"
         >
-          <Download className="w-4 h-4" />
-          Exportar Excel
+          {exportando
+            ? <Loader2 className="w-4 h-4 animate-spin" />
+            : <Download className="w-4 h-4" />
+          }
+          {exportando ? 'Exportando...' : 'Exportar Excel'}
         </button>
       </div>
 

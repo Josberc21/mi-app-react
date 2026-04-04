@@ -41,6 +41,7 @@ const VistaAsignaciones = ({
 }) => {
   const [formAsig, setFormAsig]     = useState(FORM_INICIAL);
   const [ordenEstado, setOrdenEstado] = useState(null);
+  const [guardando, setGuardando]   = useState(false);
 
   const modalEliminar  = useModal();
   const modalCompletar = useModal();
@@ -95,6 +96,7 @@ const VistaAsignaciones = ({
     if (!formAsig.orden_id) { mostrarAdvertencia('Selecciona una orden de producción'); return; }
     if (!formAsig.empleado_id || !formAsig.operacion_id || !formAsig.cantidad) { mostrarAdvertencia('Completa todos los campos'); return; }
 
+    setGuardando(true);
     try {
       const orden           = ordenes.find((o) => o.id === parseInt(formAsig.orden_id));
       const operacionId     = parseInt(formAsig.operacion_id);
@@ -114,6 +116,8 @@ const VistaAsignaciones = ({
       await recargarDatos();
     } catch (error) {
       mostrarError(error.message);
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -207,6 +211,7 @@ const VistaAsignaciones = ({
           asignaciones={asignaciones}
           onSeleccionarOrden={handleSeleccionarOrden}
           onSubmit={handleSubmit}
+          loading={guardando}
         />
       </div>
 

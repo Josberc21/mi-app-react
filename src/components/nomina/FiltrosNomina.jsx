@@ -1,6 +1,6 @@
 // src/components/nomina/FiltrosNomina.jsx
 import React from 'react';
-import { Calendar, TrendingUp, X } from 'lucide-react';
+import { Calendar, TrendingUp, X, Loader2 } from 'lucide-react';
 
 const FiltrosNomina = ({
   filtroFechaInicio,
@@ -9,7 +9,8 @@ const FiltrosNomina = ({
   onChangeFechaFin,
   onCalcular,
   onLimpiar,
-  onRangoRapido
+  onRangoRapido,
+  calculando = false,
 }) => {
   return (
     <div className="space-y-4">
@@ -41,11 +42,14 @@ const FiltrosNomina = ({
         <div className="flex items-end">
           <button
             onClick={onCalcular}
-            disabled={!filtroFechaInicio || !filtroFechaFin}
+            disabled={!filtroFechaInicio || !filtroFechaFin || calculando}
             className="btn-primary w-full gap-2"
           >
-            <TrendingUp className="w-4 h-4" />
-            Calcular Nómina
+            {calculando
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <TrendingUp className="w-4 h-4" />
+            }
+            {calculando ? 'Calculando...' : 'Calcular Nómina'}
           </button>
         </div>
 

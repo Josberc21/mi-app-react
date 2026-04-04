@@ -3,14 +3,15 @@ import { Edit, Trash2, QrCode, DollarSign, Users } from 'lucide-react';
 
 const TablaEmpleados = ({ empleados, onEditar, onEliminar, calcularNomina }) => {
   const generarQRParaImprimir = (empleado) => {
-    const url = `${window.location.origin}/operario/${empleado.id}`;
-    const ventana = window.open('', '', 'width=500,height=700');
+    const url = window.location.origin;
+    const nombreSeguro = empleado.nombre.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const ventana = window.open('', '', 'width=500,height=680');
     ventana.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="UTF-8">
-          <title>QR - ${empleado.nombre}</title>
+          <title>QR - ${nombreSeguro}</title>
           <style>
             body { font-family: 'Inter', Arial, sans-serif; text-align: center; padding: 40px; background: #0b0f1a; margin: 0; }
             .container { background: white; padding: 36px; border-radius: 20px; max-width: 380px; margin: 0 auto; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
@@ -29,14 +30,14 @@ const TablaEmpleados = ({ empleados, onEditar, onEliminar, calcularNomina }) => 
         <body>
           <div class="container">
             <span class="badge">Operario</span>
-            <h1>${empleado.nombre}</h1>
+            <h1>${nombreSeguro}</h1>
             <p class="id">ID: ${empleado.id} · ${empleado.telefono || ''}</p>
             <div class="qr-container"><div id="qr"></div></div>
             <div class="instructions">
-              <strong>Cómo usar:</strong><br/>
-              1. Imprime y pega este QR en tu máquina<br/>
-              2. Escanea con tu celular<br/>
-              3. Ve tus asignaciones al instante
+              <strong>Cómo acceder:</strong><br/>
+              1. Escanea el QR con tu celular<br/>
+              2. Ingresa tu usuario y contraseña<br/>
+              3. Revisa tus asignaciones del día
               <div class="url">${url}</div>
             </div>
             <div class="btns">
@@ -52,7 +53,7 @@ const TablaEmpleados = ({ empleados, onEditar, onEliminar, calcularNomina }) => 
               document.getElementById("dl").addEventListener("click", () => {
                 const a = document.createElement("a");
                 a.href = canvas.toDataURL("image/png");
-                a.download = "QR_${empleado.nombre.replace(/\s+/g, '_')}.png";
+                a.download = "QR_${empleado.nombre.replace(/[^a-zA-Z0-9]/g, '_')}.png";
                 a.click();
               });
             }, 500);
